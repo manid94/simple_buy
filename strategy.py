@@ -82,10 +82,27 @@ api = {}
 
 logger = LocalJsonLogger()
 
-def logger_entry(tsymbol,orderno,direction,type,qty,ordered_price,order_type,fillqty=0,avg_price = 0,status='placed'):
-    new_entry = logger.generate_log_entry(tsymbol,orderno,direction,type,qty,ordered_price,order_type,fillqty,avg_price,status)
+def logger_entry(tsymbol, orderno, direction, order_type, qty, ordered_price, order_method, fillqty, avg_price, status):
+    # Using a dictionary for clear and structured data logging
+    datas = {
+        "symbol": tsymbol,
+        "order_number": orderno,
+        "direction": direction,
+        "order_type": order_type,
+        "quantity": qty,
+        "ordered_price": ordered_price,
+        "order_method": order_method,
+        "filled_quantity": fillqty,
+        "average_price": avg_price,
+        "status": status
+    }
+    
+    # Generate log entry and append to log
+    new_entry = logger.generate_log_entry(datas)
     logger.append_log(new_entry)
+    
     return True
+
 
 
 
@@ -116,7 +133,7 @@ def event_handler_order_update(message):
         # print(message['status'].lower())
         if message['status'].lower() == 'complete':
             ORDER_STATUS[message['norenordno']]['avgprc'] =  message.get('avgprc', 0)
-        #logger_entry(message.get('tsym', 0),message['norenordno'],message.get('remarks', 'exit'),message.get('trantype', 'S'),message.get('qty', 0),message.get('prc', 0), 'LMT',  message.get('flqty', 0),message.get('avgprc', 0),  'placed')
+        logger_entry(message.get('tsym', 0),message['norenordno'],message.get('remarks', 'exit'),message.get('trantype', 'S'),message.get('qty', 0),message.get('prc', 0), 'LMT',  message.get('flqty', 0),message.get('avgprc', 0),  'placed')
             
 
     
@@ -334,7 +351,7 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event):
             # important need to check for order execution if not succeded then retry with modify 
             buy_back_price = round_to_nearest_0_05(float(sell_price) * float(BUY_BACK_PERCENTAGE))
             buy_back_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'B', buy_back_lots, limit_price=buy_back_price, leg_type='start')
-            #logger_entry(ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,option_type,'B',buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
+            logger_entry(ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,option_type,'B',buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
             CURRENT_STRATEGY_ORDERS.append(buy_back_order_id)
 
             while not is_order_complete(buy_back_order_id, ORDER_STATUS):
@@ -343,7 +360,7 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event):
             PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_BUY_'+option_type] = buy_back_avg_price
             sell_target_price = round_to_nearest_0_05(float(buy_back_avg_price) * float(1 + SELL_TARGET_PERCENTAGE))
             sell_target_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'S', buy_back_lots, limit_price=sell_target_price, leg_type='end')
-            #logger_entry(ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,option_type,'S',buy_back_lots,sell_target_price, 'LMT',   0,0,  'placed')
+            logger_entry(ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,option_type,'S',buy_back_lots,sell_target_price, 'LMT',   0,0,  'placed')
             print(f'OUTSIDE sell_target_order_id {sell_target_order_id}')
             CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
 
@@ -514,8 +531,9 @@ def run_strategy(stop_event):
                 sell_price_ce = fetch_last_trade_price('CE')
                 sell_price_pe = fetch_last_trade_price('PE')
                 print(f'sell_price_ce{sell_price_ce}:sell_price_pe:{sell_price_pe}')
-                #logger_entry('CE','start','CE','B','15',sell_price_ce, 'watch',0,0,'start')
-                #logger_entry('PE','start','PE','B','15',sell_price_pe, 'watch',0,0,'start')
+                
+                logger_entry('CE','orderno','direction','CE',ONE_LOT_QUANTITY,sell_price_ce,'GET MKT',0,0,'start')
+                logger_entry('PE','orderno','direction','PE',ONE_LOT_QUANTITY,sell_price_pe,'GET MKT',0,0,'start')
                 
                 PRICE_DATA['CE_PRICE_DATA']['INITIAL_SELL_CE'] = sell_price_ce
                 PRICE_DATA['PE_PRICE_DATA']['INITIAL_SELL_PE'] = sell_price_pe

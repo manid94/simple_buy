@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trading Orders Table</title>
+    <title>Dynamic Trading Orders Table</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/jquery.dataTables.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
@@ -27,7 +27,16 @@
     </style>
 </head>
 <body>
-    <h2>Trading Orders Table</h2>
+    <h2>Dynamic Trading Orders Table</h2>
+
+    <!-- File Upload -->
+    <input type="file" id="fileInput" accept=".json">
+    <button onclick="loadFile()">Load File</button>
+
+    <!-- URL Upload -->
+    <input type="text" id="urlInput" placeholder="Enter JSON URL">
+    <button onclick="loadFromUrl()">Load from URL</button>
+
     <table id="ordersTable" class="display">
         <thead>
             <tr>
@@ -40,6 +49,7 @@
                 <th>Executed Price</th>
                 <th>Executed Quantity</th>
                 <th>Order Type</th>
+                <th>Order Method</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -49,63 +59,56 @@
     </table>
 
     <script>
-        // Sample JSON data
-        const jsonData = [
-            {
-                "time": "2024-10-17 16:39:31",
-                "tsymbol": "BANKNIFTY23OCT24C52200",
-                "orderno": "24101701534138",
-                "type": "B",
-                "quantity": "50",
-                "ordered_price": 260.00,
-                "executed_price": 258.00,
-                "executed_quantity": "50",
-                "order_type": "MKT",
-                "status": "placed"
-            },
-            {
-                "time": "2024-10-17 16:40:41",
-                "tsymbol": "BANKNIFTY23OCT24P54200",
-                "orderno": "44101701535138",
-                "type": "S",
-                "quantity": "50",
-                "ordered_price": 270.00,
-                "executed_price": 278.00,
-                "executed_quantity": "75",
-                "order_type": "LMT",
-                "status": "open"
-            },
-            {
-                "time": "2024-10-17 16:41:41",
-                "tsymbol": "BANKNIFTY23OCT24P51200",
-                "orderno": "27101701535938",
-                "type": "S",
-                "quantity": "30",
-                "ordered_price": 210.00,
-                "executed_price": 228.00,
-                "executed_quantity": "305",
-                "order_type": "update",
-                "status": "pending"
-            },
-            {
-                "time": "2024-10-17 16:41:41",
-                "tsymbol": "BANKNIFTY23OCT24C50200",
-                "orderno": "24108701535938",
-                "type": "B",
-                "quantity": "45",
-                "ordered_price": 110.00,
-                "executed_price": 128.00,
-                "executed_quantity": "60",
-                "order_type": "update",
-                "status": "completed"
-            }
-        ];
+        let table;
 
-        // Populate the table with JSON data
+        // Initialize DataTable
         $(document).ready(function() {
-            const table = $('#ordersTable').DataTable();
+            table = $('#ordersTable').DataTable({
+                "paging": true,
+                "searching": true,
+                "ordering": true
+            });
+        });
 
-            jsonData.forEach(order => {
+        // Load JSON data from uploaded file
+        function loadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const data = JSON.parse(event.target.result);
+                    updateTable(data);
+                };
+                reader.readAsText(file);
+            } else {
+                alert("Please select a file.");
+            }
+        }
+
+        // Load JSON data from provided URL
+        function loadFromUrl() {
+            const url = document.getElementById('urlInput').value;
+            if (url) {
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        updateTable(data);
+                    })
+                    .catch(error => {
+                        alert("Error loading JSON from URL: " + error);
+                    });
+            } else {
+                alert("Please enter a URL.");
+            }
+        }
+
+        // Update DataTable with new JSON data
+        function updateTable(data) {
+            table.clear().draw(); // Clear existing data
+
+            data.forEach(order => {
                 table.row.add([
                     order.time,
                     order.tsymbol,
@@ -116,17 +119,11 @@
                     order.executed_price,
                     order.executed_quantity,
                     order.order_type,
+                    order.order_method,  // Added order_method field
                     order.status
                 ]).draw(false);
             });
-
-            // Initialize DataTables with sorting and filtering
-            $('#ordersTable').DataTable({
-                "paging": true,
-                "searching": true,
-                "ordering": true
-            });
-        });
+        }
     </script>
 </body>
 </html>

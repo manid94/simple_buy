@@ -40,21 +40,34 @@ class LocalJsonLogger:
         with open(self.log_file_name, 'w') as file:
             json.dump(self.log_data, file, indent=4)
         print(f"Appended new entry to '{self.log_file_name}'.")
-
-    def generate_log_entry(tsymbol,orderno,direction,type,qty,ordered_price,order_type,fillqty=0,avg_price = 0,status='placed'):
+                      
+    def generate_log_entry(self, datas):
+        # Extracting individual values from the datas dictionary
+        tsymbol = datas.get("symbol")
+        orderno = datas.get("order_number")
+        direction = datas.get("direction")
+        order_type = datas.get("order_type")
+        qty = datas.get("quantity")
+        ordered_price = datas.get("ordered_price")
+        order_method = datas.get("order_method")
+        fillqty = datas.get("filled_quantity")
+        avg_price = datas.get("average_price")
+        status = datas.get("status")
+    
         """Generate a new log entry with random data (simulating a trading strategy)."""
         return {
-            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "tsymbol": tsymbol,
-            "orderno": orderno,
-            "direction": direction,
-            "type": type,
+            "time": str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            "tsymbol": str(tsymbol),
+            "orderno": str(orderno),
+            "direction": str(direction),
+            "type": str(type),
             "quantity": str(qty),
-            "ordered_price": ordered_price,
-            "executed_price": avg_price,
+            "ordered_price": str(ordered_price),
+            "executed_price": str(avg_price),
             "executed_quantity": str(fillqty),
-            "order_type": order_type,
-            "status": status   
+            "order_type": str(order_type),
+            "order_method": str(order_method),
+            "status": str(status)   
         }
         return {
             "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
