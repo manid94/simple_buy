@@ -283,7 +283,7 @@ def calculate_leg_pnl(option_type, type, lots):
     # Check if the nodes exist in PRICE_DATAS before accessing
     if node_sell in PRICE_DATAS:
         # Use the stored price or fetch the last traded price if it's zero
-        sold_price_or_ltp_price = PRICE_DATAS[node_sell]
+        sold_price_or_ltp_price = int(PRICE_DATAS[node_sell])
         if sold_price_or_ltp_price == 0:
             sold_price_or_ltp_price = fetch_last_trade_price(option_type)
     else:
