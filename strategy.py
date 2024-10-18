@@ -137,7 +137,7 @@ def event_handler_order_update(message):
         # print(message['status'].lower())
         if message['status'].lower() == 'complete':
             ORDER_STATUS[message['norenordno']]['avgprc'] =  message.get('avgprc', 0)
-        logger_entry(message.get('tsym', 0),message['norenordno'],message.get('remarks', 'exit'),message.get('trantype', 'S'),message.get('qty', 0),message.get('prc', 0), 'LMT',  message.get('flqty', 0),message.get('avgprc', 0),  'placed')
+        logger_entry(message.get('tsym', 0),message['norenordno'],message.get('trantype', 'U'),message.get('remarks', 'exit'),message.get('qty', 0),message.get('prc', 0),message.get('prctyp', 'LMT'),  message.get('flqty', 0),message.get('avgprc', 0),  message.get('trantype', 'S'))
             
 
     
@@ -543,8 +543,8 @@ def run_strategy(stop_event):
                 logger_entry('CE','orderno','direction','CE',ONE_LOT_QUANTITY,sell_price_ce,'GET MKT',0,0,'start')
                 logger_entry('PE','orderno','direction','PE',ONE_LOT_QUANTITY,sell_price_pe,'GET MKT',0,0,'start')
                 
-                PRICE_DATA['CE_PRICE_DATA']['INITIAL_SELL_CE'] = sell_price_ce
-                PRICE_DATA['PE_PRICE_DATA']['INITIAL_SELL_PE'] = sell_price_pe
+                PRICE_DATA['CE_PRICE_DATA']['INITIAL_SELL_CE'] = 0
+                PRICE_DATA['PE_PRICE_DATA']['INITIAL_SELL_PE'] = 0
 
                 strategy_running = True
                 
