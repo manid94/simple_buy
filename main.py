@@ -1,13 +1,12 @@
-import datetime
-import time
 import threading
 import time
 import os, sys
 from urllib.parse import parse_qs, urlparse
 import hashlib
 import pandas as pd
-from utils import ist_datatime, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete
+from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete
 from brokerapi import getflattradeapi, getshoonyatradeapi
+from datetime import date, datetime
 from logger import LocalJsonLogger
 import pytz
 
@@ -65,16 +64,15 @@ strategy_running = False
 exited_strategy = False
 sell_price_ce = 0
 sell_price_pe = 0
-
+ist_datatime = datetime.now(ist)
 
 #api = getflattradeapi()
 api = getshoonyatradeapi()
 
 logger = LocalJsonLogger()
 
-
-def logger_entry(tsymbol,orderno,type,qty,ordered_price,order_type,fillqty=0,avg_price = 0,status='placed'):
-    new_entry = logger.generate_log_entry(tsymbol,orderno,type,qty,ordered_price,order_type,fillqty=0,avg_price = 0,status='placed')
+def logger_entry(tsymbol,orderno,direction,type,qty,ordered_price,order_type,fillqty=0,avg_price = 0,status='placed'):
+    new_entry = logger.generate_log_entry(tsymbol,orderno,direction,type,qty,ordered_price,order_type,fillqty,avg_price,status)
     logger.append_log(new_entry)
     return True
 
@@ -107,7 +105,7 @@ def event_handler_order_update(message):
         # print(message['status'].lower())
         if message['status'].lower() == 'complete':
             ORDER_STATUS[message['norenordno']]['avgprc'] =  message.get('avgprc', 0)
-        logger_entry(message.get('tsym', 0),message['norenordno'],message.get('remarks', 'exit'),message.get('trantype', 'S'),message.get('qty', 0),message.get('prc', 0), 'LMT',  message.get('flqty', 0),message.get('avgprc', 0),  'placed')
+        #logger_entry(message.get('tsym', 0),message['norenordno'],message.get('remarks', 'exit'),message.get('trantype', 'S'),message.get('qty', 0),message.get('prc', 0), 'LMT',  message.get('flqty', 0),message.get('avgprc', 0),  'placed')
             
 
     
@@ -148,8 +146,8 @@ def open_callback():
 #end of callbacks
 
 def fetch_last_trade_price(option_type):
-        print('Deepak')
-        print(SYMBOLDICT)
+        # print('Deepak')
+        # print(SYMBOLDICT)
         
         # Check if the option_type exists in LEG_TOKEN
         if option_type not in LEG_TOKEN:
@@ -323,7 +321,7 @@ def monitor_leg(option_type, sell_price, strike_price):
             # important need to check for order execution if not succeded then retry with modify 
             buy_back_price = round_to_nearest_0_05(float(sell_price) * float(BUY_BACK_PERCENTAGE))
             buy_back_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'B', buy_back_lots, limit_price=buy_back_price, leg_type='start')
-            logger_entry(ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,option_type,'B',buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
+            #logger_entry(ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,option_type,'B',buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
             CURRENT_STRATEGY_ORDERS.append(buy_back_order_id)
 
             while not is_order_complete(buy_back_order_id, ORDER_STATUS):
@@ -332,7 +330,7 @@ def monitor_leg(option_type, sell_price, strike_price):
             PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_BUY_'+option_type] = buy_back_avg_price
             sell_target_price = round_to_nearest_0_05(float(buy_back_avg_price) * float(1 + SELL_TARGET_PERCENTAGE))
             sell_target_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'S', buy_back_lots, limit_price=sell_target_price, leg_type='end')
-            logger_entry(ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,option_type,'S',buy_back_lots,sell_target_price, 'LMT',   0,0,  'placed')
+            #logger_entry(ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,option_type,'S',buy_back_lots,sell_target_price, 'LMT',   0,0,  'placed')
             print(f'OUTSIDE sell_target_order_id {sell_target_order_id}')
             CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
 
@@ -486,24 +484,25 @@ def exit_strategy():
 
 def run_strategy():
     global strategy_running, sell_price_ce, sell_price_pe, ORDER_STATUS, PRICE_DATA
-    start_time = ist_datatime.replace(hour=9, minute=17, second=0, microsecond=0).time()
+    start_time = ist_datatime.replace(hour=9, minute=47, second=0, microsecond=0).time()
     end_time = ist_datatime.replace(hour=23, minute=30, second=0, microsecond=0).time()
     lots = INITIAL_LOTS * ONE_LOT_QUANTITY
     # dynamic_data = threading.Thread(target=continuous_update_socket_data, args=())
     # dynamic_data.start()
     atm_strike = fetch_atm_strike()
     while not strategy_running:
-        current_time = ist_datatime.time()
+        current_time = datetime.now(ist).time()
         if current_time >= end_time:
             break
         if start_time <= current_time <= end_time:
             if not strategy_running:
-                
+                atm_strike = fetch_atm_strike()
                 print('passed atm strike')
                 sell_price_ce = fetch_last_trade_price('CE')
                 sell_price_pe = fetch_last_trade_price('PE')
-                logger_entry('CE','start','CE','B','15',sell_price_ce, 'watch',0,0,'start')
-                logger_entry('PE','start','PE','B','15',sell_price_pe, 'watch',0,0,'start')
+                print(f'sell_price_ce{sell_price_ce}:sell_price_pe:{sell_price_pe}')
+                #logger_entry('CE','start','CE','B','15',sell_price_ce, 'watch',0,0,'start')
+                #logger_entry('PE','start','PE','B','15',sell_price_pe, 'watch',0,0,'start')
                 
                 PRICE_DATA['CE_PRICE_DATA']['INITIAL_SELL_CE'] = sell_price_ce
                 PRICE_DATA['PE_PRICE_DATA']['INITIAL_SELL_PE'] = sell_price_pe
@@ -528,7 +527,7 @@ def run_strategy():
 
         else:
             print("Outside trading hours, strategy paused.")
-            time.sleep(60)
+            time.sleep(1)
             
         
     return True
