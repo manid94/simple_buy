@@ -137,7 +137,7 @@ def event_handler_order_update(message):
         # print(message['status'].lower())
         if message['status'].lower() == 'complete':
             ORDER_STATUS[message['norenordno']]['avgprc'] =  message.get('avgprc', 0)
-        logger_entry(message.get('tsym', 0),message['norenordno'],message.get('trantype', 'U'),message.get('remarks', 'exit'),message.get('qty', 0),message.get('prc', 0),message.get('prctyp', 'LMT'),  message.get('flqty', 0),message.get('avgprc', 0),  message.get('trantype', 'S'))
+        logger_entry(message.get('tsym', 0),message['norenordno'],message.get('trantype', 'U'),message.get('remarks', 'exit'),message.get('qty', 0),message.get('prc', 0),message.get('prctyp', 'LMT'),  message.get('flqty', 0),message.get('avgprc', 0),  message.get('status', 'S'))
             
 
     
@@ -354,7 +354,7 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event):
             # important need to check for order execution if not succeded then retry with modify 
             buy_back_price = round_to_nearest_0_05(float(sell_price) * float(BUY_BACK_PERCENTAGE))
             buy_back_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'B', buy_back_lots, limit_price=buy_back_price, leg_type='start')
-            logger_entry(ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,option_type,'B',buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
+            logger_entry(ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,'B',option_type,buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
             CURRENT_STRATEGY_ORDERS.append(buy_back_order_id)
 
             while not is_order_complete(buy_back_order_id, ORDER_STATUS):
@@ -363,7 +363,7 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event):
             PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_BUY_'+option_type] = buy_back_avg_price
             sell_target_price = round_to_nearest_0_05(float(buy_back_avg_price) * float(1 + SELL_TARGET_PERCENTAGE))
             sell_target_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'S', buy_back_lots, limit_price=sell_target_price, leg_type='end')
-            logger_entry(ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,option_type,'S',buy_back_lots,sell_target_price, 'LMT',   0,0,  'placed')
+            logger_entry(ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,'S',option_type,buy_back_lots,sell_target_price, 'LMT',   0,0,  'placed')
             print(f'OUTSIDE sell_target_order_id {sell_target_order_id}')
             CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
 

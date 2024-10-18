@@ -25,27 +25,37 @@ def main():
     # Define the end time as 2:30 PM
     start_time = ist_datatime.replace(hour=TOKENGENERATION_TIME['hours'], minute=TOKENGENERATION_TIME['minutes'], second=TOKENGENERATION_TIME['seconds'], microsecond=0).time()
     end_time = ist_datatime.replace(hour=STRATEGY_CLOSE_TIME['hours'], minute=STRATEGY_CLOSE_TIME['minutes'], second=STRATEGY_CLOSE_TIME['seconds'], microsecond=0).time()
-    entry_happened_today = False
-    current_time = datetime.now(ist).time()
+    entry_happened_today = True
+    
     stop_event = threading.Event()
-
+    thread = threading.Thread(target=start_the_strategy, args=(stop_event,))
 
     # Keep running the task periodically until 2:30 PM
     while True:
-        if(start_time <= current_time) and not entry_happened_today:
-            thread = threading.Thread(target=start_the_strategy, args=(stop_event,))
-            thread.start()
+        current_time = datetime.now(ist).time()
+        if(start_time <= current_time <= end_time) and not entry_happened_today:
+            print("Starting strategy thread.")
+            try:
+                thread.start()
+            except Exception as e:
+                print(f"Error while starting the strategy: {e}")
             entry_happened_today = True
-            print("Main program has finished.")
+            print("Strategy has started.")
 
-        if(end_time <= current_time):
-            stop_event.set()
-            # Wait for the thread to finish
-            thread.join()
-            time.sleep(36000)
+        if current_time > end_time and entry_happened_today:
+            print("Stopping strategy thread.")
+            stop_event.set()  # Signal the thread to stop
+            try:
+                thread.join()
+            except Exception as e:
+                print(f"Error while starting the strategy: {e}")
+            print("Strategy has stopped for today.")
+            
+            # Reset for the next day
+            time.sleep(60 * 60 * 10)  # Sleep for 6 hours before re-checking
             entry_happened_today = False
-            stop_event.clear()
-
+            stop_event.clear()  # Clear the stop event flag
+        time.sleep(30) 
     return True
 
 main()
