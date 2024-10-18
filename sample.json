@@ -1,0 +1,50 @@
+[
+    {
+        "time": "2024-10-17 16:39:31",
+        "tsymbol": "BANKNIFTY23OCT24C52200",
+        "orderno": "24101701534138",
+        "type": "B",
+        "quantity": "50",
+        "ordered_price": 260,
+        "executed_price": 258,
+        "executed_quantity": "50",
+        "order_type": "MKT",
+        "status": "placed"
+    },
+    {
+        "time": "2024-10-17 16:40:41",
+        "tsymbol": "BANKNIFTY23OCT24P54200",
+        "orderno": "44101701535138",
+        "type": "S",
+        "quantity": "50",
+        "ordered_price": 270,
+        "executed_price": 278,
+        "executed_quantity": "75",
+        "order_type": "LMT",
+        "status": "open"
+    },
+    {
+        "time": "2024-10-17 16:41:41",
+        "tsymbol": "BANKNIFTY23OCT24P51200",
+        "orderno": "27101701535938",
+        "type": "S",
+        "quantity": "30",
+        "ordered_price": 210,
+        "executed_price": 228,
+        "executed_quantity": "305",
+        "order_type": "update",
+        "status": "pending"
+    },
+    {
+        "time": "2024-10-17 16:41:41",
+        "tsymbol": "BANKNIFTY23OCT24C50200",
+        "orderno": "24108701535938",
+        "type": "B",
+        "quantity": "45",
+        "ordered_price": 110,
+        "executed_price": 128,
+        "executed_quantity": "60",
+        "order_type": "update",
+        "status": "completed"
+    }
+]

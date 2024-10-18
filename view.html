@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Orders Table</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h2>Trading Orders Table</h2>
+    <table id="ordersTable" class="display">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Symbol</th>
+                <th>Order No</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>Ordered Price</th>
+                <th>Executed Price</th>
+                <th>Executed Quantity</th>
+                <th>Order Type</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data will be populated by JavaScript -->
+        </tbody>
+    </table>
+
+    <script>
+        // Sample JSON data
+        const jsonData = [
+            {
+                "time": "2024-10-17 16:39:31",
+                "tsymbol": "BANKNIFTY23OCT24C52200",
+                "orderno": "24101701534138",
+                "type": "B",
+                "quantity": "50",
+                "ordered_price": 260.00,
+                "executed_price": 258.00,
+                "executed_quantity": "50",
+                "order_type": "MKT",
+                "status": "placed"
+            },
+            {
+                "time": "2024-10-17 16:40:41",
+                "tsymbol": "BANKNIFTY23OCT24P54200",
+                "orderno": "44101701535138",
+                "type": "S",
+                "quantity": "50",
+                "ordered_price": 270.00,
+                "executed_price": 278.00,
+                "executed_quantity": "75",
+                "order_type": "LMT",
+                "status": "open"
+            },
+            {
+                "time": "2024-10-17 16:41:41",
+                "tsymbol": "BANKNIFTY23OCT24P51200",
+                "orderno": "27101701535938",
+                "type": "S",
+                "quantity": "30",
+                "ordered_price": 210.00,
+                "executed_price": 228.00,
+                "executed_quantity": "305",
+                "order_type": "update",
+                "status": "pending"
+            },
+            {
+                "time": "2024-10-17 16:41:41",
+                "tsymbol": "BANKNIFTY23OCT24C50200",
+                "orderno": "24108701535938",
+                "type": "B",
+                "quantity": "45",
+                "ordered_price": 110.00,
+                "executed_price": 128.00,
+                "executed_quantity": "60",
+                "order_type": "update",
+                "status": "completed"
+            }
+        ];
+
+        // Populate the table with JSON data
+        $(document).ready(function() {
+            const table = $('#ordersTable').DataTable();
+
+            jsonData.forEach(order => {
+                table.row.add([
+                    order.time,
+                    order.tsymbol,
+                    order.orderno,
+                    order.type,
+                    order.quantity,
+                    order.ordered_price,
+                    order.executed_price,
+                    order.executed_quantity,
+                    order.order_type,
+                    order.status
+                ]).draw(false);
+            });
+
+            // Initialize DataTables with sorting and filtering
+            $('#ordersTable').DataTable({
+                "paging": true,
+                "searching": true,
+                "ordering": true
+            });
+        });
+    </script>
+</body>
+</html>
