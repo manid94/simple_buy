@@ -18,17 +18,18 @@ SYMBOLDICT = {}
 
 # Constants Configs
 SYMBOL = 'Nifty bank'
+BUY_BACK_STATIC = False
 INITIAL_LOTS = 1  # Start with 1 lot
-BUY_BACK_LOTS = 6
 STRIKE_DIFFERENCE = 400
 ONE_LOT_QUANTITY = 15  # Number of units per lot in Bank Nifty
-TARGET_PROFIT = 120
-MAX_LOSS = 120
-MAX_LOSS_PER_LEG = 1000
+TARGET_PROFIT = 500
+MAX_LOSS = 1000
+MAX_LOSS_PER_LEG = 1200
 SAFETY_STOP_LOSS_PERCENTAGE = 0.83
 BUY_BACK_PERCENTAGE = 0.82
 SELL_TARGET_PERCENTAGE = 0.02
 BUY_BACK_LOSS_PERCENTAGE = 0.93
+AVAILABLE_MARGIN = 25000
 ENTRY_TIME = {
     'hours': 11,
     'minutes': 2,
@@ -41,12 +42,15 @@ EXIT_TIME = {
 
 }
 
+# DYNAMIC CONFIG
+BUY_BACK_LOTS = 6
 
 
 
 
 
 # Strategy LEVEL global Variables
+
 LEG_TOKEN = {}
 PRICE_DATA = {
     'CE_PRICE_DATA' : {
@@ -328,7 +332,6 @@ def check_unsold_lots(id):
 def monitor_leg(option_type, sell_price, strike_price, stop_event):
     global strategy_running, ORDER_STATUS, PRICE_DATA, exited_strategy
     leg_entry = False
-    lots = INITIAL_LOTS * ONE_LOT_QUANTITY
     buy_back_lots = BUY_BACK_LOTS * ONE_LOT_QUANTITY
     print('monitor '+option_type)
     while strategy_running and not leg_entry:
@@ -514,7 +517,7 @@ def exit_strategy():
     print("Strategy exited.")
 
 def run_strategy(stop_event):
-    global strategy_running, sell_price_ce, sell_price_pe, ORDER_STATUS, PRICE_DATA
+    global strategy_running, sell_price_ce, sell_price_pe, ORDER_STATUS, PRICE_DATA, BUY_BACK_LOTS
     start_time = ist_datatime.replace(hour=ENTRY_TIME['hours'], minute=ENTRY_TIME['minutes'], second=ENTRY_TIME['seconds'], microsecond=0).time()
     end_time = ist_datatime.replace(hour=EXIT_TIME['hours'], minute=EXIT_TIME['minutes'], second=EXIT_TIME['seconds'], microsecond=0).time()
     lots = INITIAL_LOTS * ONE_LOT_QUANTITY
@@ -531,6 +534,11 @@ def run_strategy(stop_event):
                 sell_price_ce = fetch_last_trade_price('CE')
                 sell_price_pe = fetch_last_trade_price('PE')
                 print(f'sell_price_ce{sell_price_ce}:sell_price_pe:{sell_price_pe}')
+
+                if(not BUY_BACK_STATIC):
+                    ce_lot = int(AVAILABLE_MARGIN/(ONE_LOT_QUANTITY * sell_price_ce))
+                    pe_lot = int(AVAILABLE_MARGIN/(ONE_LOT_QUANTITY * sell_price_ce))
+                    BUY_BACK_LOTS = min(ce_lot, pe_lot)
                 
                 logger_entry('CE','orderno','direction','CE',ONE_LOT_QUANTITY,sell_price_ce,'GET MKT',0,0,'start')
                 logger_entry('PE','orderno','direction','PE',ONE_LOT_QUANTITY,sell_price_pe,'GET MKT',0,0,'start')
