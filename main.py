@@ -33,7 +33,7 @@ def main():
     # Keep running the task periodically until 2:30 PM
     while True:
         if(start_time <= current_time) and not entry_happened_today:
-            thread = threading.Thread(target=start_the_strategy, args=(stop_event,0))
+            thread = threading.Thread(target=start_the_strategy, args=(stop_event,))
             thread.start()
             entry_happened_today = True
             print("Main program has finished.")

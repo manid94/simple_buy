@@ -5,7 +5,7 @@ from urllib.parse import parse_qs, urlparse
 import hashlib
 import pandas as pd
 from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete
-from brokerapi import getflattradeapi, getshoonyatradeapi
+from brokerapi import getshoonyatradeapi
 from datetime import date, datetime
 from logger import LocalJsonLogger
 import pytz
@@ -398,7 +398,7 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event):
 
 
 # Function to monitor the strategy
-def monitor_strategy(stop_event,dummy):
+def monitor_strategy(stop_event):
     global strategy_running, exited_strategy
     print('monitor_strategy ')
     while strategy_running:
@@ -556,7 +556,7 @@ def run_strategy(stop_event):
                 ce_thread.start()
                 pe_thread.start()
 
-                strategy_thread = threading.Thread(target=monitor_strategy, args=(stop_event,0)) # static uncomment
+                strategy_thread = threading.Thread(target=monitor_strategy, args=(stop_event,)) # static uncomment
                 strategy_thread.start() # static uncomment
 
                 ce_thread.join()
@@ -572,7 +572,7 @@ def run_strategy(stop_event):
     return True
 
 
-def start_the_strategy(even,data):
+def start_the_strategy(even):
         global api
         """Cancel order logic."""
         try:
