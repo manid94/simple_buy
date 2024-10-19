@@ -54,6 +54,7 @@ class LocalJsonLogger:
         avg_price = datas.get("average_price")
         status = datas.get("status")
     
+        print(f'inside generate_log_entry {datas}')
         """Generate a new log entry with random data (simulating a trading strategy)."""
         return {
             "time": str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),

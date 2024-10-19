@@ -3,18 +3,14 @@ import time
 import os, sys
 from urllib.parse import parse_qs, urlparse
 import hashlib
-import pandas as pd
 from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete
 from brokerapi import getshoonyatradeapi
 from datetime import date, datetime
 from logger import LocalJsonLogger
-import pytz
+from api_websocket import OpenWebSocket
 
-# Common to all strategies
-ORDER_STATUS = {}
-# flag to tell us if the websocket is open
-socket_opened = False
-SYMBOLDICT = {}
+# flag to tell us if the api_websocket is open
+
 
 # Constants Configs
 SYMBOL = 'Nifty bank'
@@ -84,7 +80,7 @@ ist_datatime = datetime.now(ist)
 #api = getflattradeapi()
 api = {}
 
-logger = LocalJsonLogger()
+logger = {}
 
 def logger_entry(tsymbol, orderno, direction, order_type, qty, ordered_price, order_method, fillqty, avg_price, status):
     # Using a dictionary for clear and structured data logging
@@ -108,122 +104,9 @@ def logger_entry(tsymbol, orderno, direction, order_type, qty, ordered_price, or
     return True
 
 
-
-
-
-
-#application callbacks
-def event_handler_order_update(message):
-    global ORDER_STATUS
-    # print('print("order event: " + str(message))')
-    # order event: {
-    #       't': 'om', 'norenordno': '24101600226847', 'uid': 'FT053455', 'actid': 'FT053455', 'exch': 'NFO', 'tsym': 'BANKNIFTY16OCT24P50500',
-    #        'trantype': 'B', 'qty': '30', 'prc': '5.25', 'pcode': 'I', 'remarks': 'my_order_002', 'rejreason': ' ', 'status': 'COMPLETE',
-    #        'reporttype': 'Fill', 'flqty': '30', 'flprc': '2.85', 'flid': '380225664', 'fltm': '16-10-2024 11:15:20', 'prctyp': 'LMT',
-    #         'ret': 'DAY', 'exchordid': '1500000079566637', 'fillshares': '30', 'dscqty': '0', 'avgprc': '2.85', 'exch_tm': '16-10-2024 11:15:20'
-    # }
-    # print("order event: " + str(message))
-    
-    if 'norenordno' in message:
-        ORDER_STATUS[message['norenordno']] = {}
-        ORDER_STATUS[message['norenordno']]['status'] = message['status']
-        ORDER_STATUS[message['norenordno']]['flqty'] =  message.get('flqty', 0)
-        ORDER_STATUS[message['norenordno']]['qty'] =  message.get('qty', 0)
-        ORDER_STATUS[message['norenordno']]['tsym'] =  message.get('tsym', 0)
-        ORDER_STATUS[message['norenordno']]['trantype'] =  message.get('trantype', 'S')
-        ORDER_STATUS[message['norenordno']]['option_type'] =  message.get('remarks', 'exit')
-
-        # print('norenordno')
-        # print(message['status'].lower())
-        if message['status'].lower() == 'complete':
-            ORDER_STATUS[message['norenordno']]['avgprc'] =  message.get('avgprc', 0)
-        logger_entry(message.get('tsym', 0),message['norenordno'],message.get('trantype', 'U'),message.get('remarks', 'exit'),message.get('qty', 0),message.get('prc', 0),message.get('prctyp', 'LMT'),  message.get('flqty', 0),message.get('avgprc', 0),  message.get('status', 'S'))
-            
-
-    
-
-
-def event_handler_quote_update(message):
-    global SYMBOLDICT
-    #e   Exchange
-    #tk  Token
-    #lp  LTP
-    #pc  Percentage change
-    #v   volume
-    #o   Open price
-    #h   High price
-    #l   Low price
-    #c   Close price
-    #ap  Average trade price
-
-    # print("quote event: {0}".format(time.strftime('%d-%m-%Y %H:%M:%S')) + str(message))
-
-    key = message['tk']
-    if key in SYMBOLDICT:
-        symbol_info =  SYMBOLDICT[key]
-        symbol_info.update(message)
-        SYMBOLDICT[key] = symbol_info
-    else:
-        SYMBOLDICT[key] = message
-
-    # print(SYMBOLDICT[key])
-
-def open_callback():
-    global socket_opened
-    socket_opened = True
-    #print('app is connected')
-
-    #api.subscribe(['NSE|22', 'BSE|522032'])
-
-#end of callbacks
-
-def fetch_last_trade_price(option_type):
-        # print('Deepak')
-        # print(SYMBOLDICT)
-        
-        # Check if the option_type exists in LEG_TOKEN
-        if option_type not in LEG_TOKEN:
-            raise ValueError(f"Invalid option_type: {option_type}")
-        
-        # Get the token for the given option_type
-        leg_token = LEG_TOKEN[option_type]
-        
-        # Check if the leg_token exists in SYMBOLDICT
-        if leg_token not in SYMBOLDICT:
-            raise KeyError(f"Token {leg_token} not found in SYMBOLDICT")
-        
-        # Fetch the last trade price
-        temp_data = SYMBOLDICT[leg_token].get('lp', None)
-        
-        # Validate if the last trade price (temp_data) exists and is not None
-        if temp_data is None:
-            raise ValueError(f"No last trade price available for {option_type} (token: {leg_token})")
-        
-        # Return the last trade price as a float
-        return float(temp_data)
-
-
-
-
-
-def open_socket():
-    if socket_opened != True:
-        print(socket_opened)
-        api.start_websocket(order_update_callback=event_handler_order_update, subscribe_callback=event_handler_quote_update, socket_open_callback=open_callback)
-    #api.start_websocket(order_update_callback=event_handler_order_update, subscribe_callback=event_handler_quote_update, socket_open_callback=open_callback)
-    print(socket_opened)
-    return True
-
-
-
-
-
 # Utility function to fetch the ATM strike price
 def fetch_atm_strike():
     global LEG_TOKEN
-
-    socket = threading.Thread(target=open_socket, args=())
-    socket.start()
 
     banknifty_price = api.get_quotes(exchange='NSE', token='26009')
     current_price = banknifty_price['lp']
@@ -247,15 +130,12 @@ def fetch_atm_strike():
     LEG_TOKEN['CE'] = ce_option['token']
     LEG_TOKEN['PE_tsym'] = pe_option['tsym']
     LEG_TOKEN['CE_tsym'] = ce_option['tsym']
-
-
-    socket.join()
     api.subscribe([subscribeDataPE,subscribeDataCE])
     return atm_strike  # Round to nearest 100
 
 
 # Calculate PNL based on current leg status
-def calculate_leg_pnl(option_type, type, lots):
+def calculate_leg_pnl(option_type, type, lots, api_websocket):
     global PRICE_DATA
     
     # Check if PRICE_DATA and the required subkey exist
@@ -285,7 +165,7 @@ def calculate_leg_pnl(option_type, type, lots):
         # Use the stored price or fetch the last traded price if it's zero
         sold_price_or_ltp_price = int(PRICE_DATAS[node_sell])
         if sold_price_or_ltp_price == 0:
-            sold_price_or_ltp_price = fetch_last_trade_price(option_type)
+            sold_price_or_ltp_price = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)
     else:
         print(f"Error: {node_sell} not found in PRICE_DATAS.")
     
@@ -293,7 +173,7 @@ def calculate_leg_pnl(option_type, type, lots):
         # Use the stored price or fetch the last traded price if it's zero
         bought_price_or_ltp_price = PRICE_DATAS[node_buy]
         if bought_price_or_ltp_price == 0:
-            bought_price_or_ltp_price = fetch_last_trade_price(option_type)
+            bought_price_or_ltp_price = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)
     else:
         print(f"Error: {node_buy} not found in PRICE_DATAS.")
     
@@ -312,31 +192,32 @@ def calculate_leg_pnl(option_type, type, lots):
 
     
 # Function to calculate total PNL
-def calculate_total_pnl():
-    ce_entry_pnl = calculate_leg_pnl('CE', 'INITIAL', INITIAL_LOTS)
-    pe_entry_pnl = calculate_leg_pnl('PE', 'INITIAL', INITIAL_LOTS)
-    ce_pnl = calculate_leg_pnl('CE', 'BUY_BACK', BUY_BACK_LOTS)
-    pe_pnl = calculate_leg_pnl('PE', 'BUY_BACK', BUY_BACK_LOTS)
-    ce_re_entry_pnl = calculate_leg_pnl('CE', 'RE_ENTRY', INITIAL_LOTS)
-    pe_re_entry_pnl = calculate_leg_pnl('CE', 'RE_ENTRY', INITIAL_LOTS)
+def calculate_total_pnl(api_websocket):
+    ce_entry_pnl = calculate_leg_pnl('CE', 'INITIAL', INITIAL_LOTS, api_websocket)
+    pe_entry_pnl = calculate_leg_pnl('PE', 'INITIAL', INITIAL_LOTS, api_websocket)
+    ce_pnl = calculate_leg_pnl('CE', 'BUY_BACK', BUY_BACK_LOTS, api_websocket)
+    pe_pnl = calculate_leg_pnl('PE', 'BUY_BACK', BUY_BACK_LOTS, api_websocket)
+    ce_re_entry_pnl = calculate_leg_pnl('CE', 'RE_ENTRY', INITIAL_LOTS, api_websocket)
+    pe_re_entry_pnl = calculate_leg_pnl('CE', 'RE_ENTRY', INITIAL_LOTS, api_websocket)
     return ce_pnl + pe_pnl + ce_entry_pnl + pe_entry_pnl + ce_re_entry_pnl + pe_re_entry_pnl  
 
-def check_unsold_lots(id):
-    fill = float(ORDER_STATUS[id]['flqty'])
-    qty = float(ORDER_STATUS[id]['qty'])
+def check_unsold_lots(id, api_websocket):
+    fill = float(api_websocket.ORDER_STATUS[id]['flqty'])
+    qty = float(api_websocket.ORDER_STATUS[id]['qty'])
     return float(qty)-float(fill)
 
 
 
 # Monitor individual leg logic (CE/PE)
-def monitor_leg(option_type, sell_price, strike_price, stop_event):
-    global strategy_running, ORDER_STATUS, PRICE_DATA, exited_strategy
+def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket):
+    global strategy_running, PRICE_DATA, exited_strategy
+    ORDER_STATUS = api_websocket.ORDER_STATUS
     leg_entry = False
     buy_back_lots = BUY_BACK_LOTS * ONE_LOT_QUANTITY
     print('monitor '+option_type)
     while strategy_running and not leg_entry:
         # print('while check monitor')
-        ltp = fetch_last_trade_price(option_type)  # Fetch LTP for the option leg
+        ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
         if exited_strategy or stop_event.is_set():
             break
         if ltp <= (float(sell_price) * float(SAFETY_STOP_LOSS_PERCENTAGE)):
@@ -345,7 +226,7 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event):
             print(f"{option_type} reached 76% of sell price, exiting...")
             # safety_sell_order_id = place_market_order(api, LEG_TOKEN, option_type, 'B', lots, 'end')
 
-            # while not wait_for_orders_to_complete(safety_sell_order_id, 100):
+            # while not wait_for_orders_to_complete(safety_sell_order_id, api_websocket, 100):
             #     time.sleep(0.5)
 
             PRICE_DATA[option_type+'_PRICE_DATA']['INITIAL_BUY_'+option_type] = sell_price
@@ -370,11 +251,11 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event):
             while not is_order_complete(sell_target_order_id, ORDER_STATUS): #static instead check weather ltp > selltarget_price
                 if exited_strategy or stop_event.is_set():
                     break
-                ltp = fetch_last_trade_price(option_type)  # Fetch LTP for the option leg
-                legpnl = calculate_leg_pnl(option_type, 'BUY_BACK', BUY_BACK_LOTS)
+                ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
+                legpnl = calculate_leg_pnl(option_type, 'BUY_BACK', BUY_BACK_LOTS, api_websocket)
                 if legpnl <= -MAX_LOSS_PER_LEG or ltp <=  (float(ORDER_STATUS[buy_back_order_id]['avgprc']) * BUY_BACK_LOSS_PERCENTAGE):
                     print(f"{option_type} reached 10% loss, exiting remaining orders.")
-                    unsold_lots = check_unsold_lots(sell_target_order_id)
+                    unsold_lots = check_unsold_lots(sell_target_order_id, api_websocket)
                     api.cancel_order(sell_target_order_id)
                     sell_target_order_id = place_market_order(api, LEG_TOKEN, option_type, 'S', unsold_lots, 'end')
                     print(f'INSIDE sell_order_id :{sell_target_order_id}')
@@ -385,11 +266,11 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event):
  
             if exited_strategy or stop_event.is_set():
                     break
-            if wait_for_orders_to_complete(sell_target_order_id, 40):
+            if wait_for_orders_to_complete(sell_target_order_id, api_websocket, 40):
                 CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
                 PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_SELL_'+option_type] = ORDER_STATUS[sell_target_order_id]['avgprc']
                 # re_sell_order_id = place_market_order(api, LEG_TOKEN, option_type, 'S', lots, 'start')
-                # wait_for_orders_to_complete(re_sell_order_id, 100)
+                # wait_for_orders_to_complete(re_sell_order_id, api_websocket, 100)
                 # CURRENT_STRATEGY_ORDERS.append(re_sell_order_id)
                 # PRICE_DATA[option_type+'_PRICE_DATA']['RE_ENTRY_SELL_'+option_type] = ORDER_STATUS[re_sell_order_id]['avgprc']
 
@@ -398,28 +279,28 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event):
 
 
 # Function to monitor the strategy
-def monitor_strategy(stop_event):
+def monitor_strategy(stop_event, api_websocket):
     global strategy_running, exited_strategy
     print('monitor_strategy ')
     while strategy_running:
         if exited_strategy or stop_event.is_set():
             break
-        pnl = calculate_total_pnl()  # Fetch the PNL
+        pnl = calculate_total_pnl(api_websocket)  # Fetch the PNL
         if pnl >= TARGET_PROFIT and not exited_strategy:
             print(f"Target profit of ₹{TARGET_PROFIT} reached. Exiting strategy.")
             # strategy_running = False
-            exit_strategy()
+            exit_strategy(api_websocket)
         elif pnl <= -MAX_LOSS and not exited_strategy:
             print(f"Max loss of ₹{MAX_LOSS} reached. Exiting strategy.")
             # strategy_running = False
-            exit_strategy()
+            exit_strategy(api_websocket)
             print('checking pnl')
         time.sleep(5)  # Check PNL every 5 seconds
 
 
 # Retry logic with a maximum number of attempts to avoid an infinite loop
-def wait_for_orders_to_complete(order_ids, max_retries=100):
-    global ORDER_STATUS
+def wait_for_orders_to_complete(order_ids, api_websocket, max_retries=100):
+    ORDER_STATUS = api_websocket.ORDER_STATUS
     attempts = 0
 
     # Ensure order_ids is always treated as a list
@@ -442,8 +323,9 @@ def wait_for_orders_to_complete(order_ids, max_retries=100):
     return True
 
 # Function to exit the strategy
-def exit_strategy():
-    global strategy_running, exited_strategy 
+def exit_strategy(api_websocket):
+    global strategy_running, exited_strategy
+    ORDER_STATUS = api_websocket.ORDER_STATUS 
     strategy_running = True  # Stop the strategy
     exited_strategy = True
     print('Exiting strategy...')
@@ -506,7 +388,7 @@ def exit_strategy():
             tsym = symbols[option_type]
             print(f"Placing market exit for {option_type}: {buy_or_sell} {abs(total)} lots")
             order_id = place_market_exit(api, tsym, buy_or_sell, abs(total))
-            wait_for_orders_to_complete(order_id, 100)
+            wait_for_orders_to_complete(order_id, api_websocket, 100)
 
     return True
 
@@ -516,12 +398,14 @@ def exit_strategy():
     # Implement logic to close all open orders and exit strategy
     print("Strategy exited.")
 
-def run_strategy(stop_event):
-    global strategy_running, sell_price_ce, sell_price_pe, ORDER_STATUS, PRICE_DATA, BUY_BACK_LOTS
+def run_strategy(stop_event, api_websocket):
+    global strategy_running, sell_price_ce, sell_price_pe, PRICE_DATA, BUY_BACK_LOTS, logger
+    ORDER_STATUS = api_websocket.ORDER_STATUS
+    logger = LocalJsonLogger()
     start_time = ist_datatime.replace(hour=ENTRY_TIME['hours'], minute=ENTRY_TIME['minutes'], second=ENTRY_TIME['seconds'], microsecond=0).time()
     end_time = ist_datatime.replace(hour=EXIT_TIME['hours'], minute=EXIT_TIME['minutes'], second=EXIT_TIME['seconds'], microsecond=0).time()
     lots = INITIAL_LOTS * ONE_LOT_QUANTITY
-
+    print('entered run_strategy')
     atm_strike = fetch_atm_strike()
     while not strategy_running:
         current_time = datetime.now(ist).time()
@@ -531,8 +415,8 @@ def run_strategy(stop_event):
             if not strategy_running:
                 atm_strike = fetch_atm_strike()
                 print('passed atm strike')
-                sell_price_ce = fetch_last_trade_price('CE')
-                sell_price_pe = fetch_last_trade_price('PE')
+                sell_price_ce = api_websocket.fetch_last_trade_price('CE', LEG_TOKEN)
+                sell_price_pe = api_websocket.fetch_last_trade_price('PE', LEG_TOKEN)
                 print(f'sell_price_ce{sell_price_ce}:sell_price_pe:{sell_price_pe}')
 
                 if(not BUY_BACK_STATIC):
@@ -548,15 +432,15 @@ def run_strategy(stop_event):
 
                 strategy_running = True
                 
-                ce_thread = threading.Thread(target=monitor_leg, args=('CE', sell_price_ce, atm_strike + STRIKE_DIFFERENCE,stop_event))
-                pe_thread = threading.Thread(target=monitor_leg, args=('PE', sell_price_pe, atm_strike - STRIKE_DIFFERENCE,stop_event))
+                ce_thread = threading.Thread(target=monitor_leg, args=('CE', sell_price_ce, atm_strike + STRIKE_DIFFERENCE,stop_event, api_websocket))
+                pe_thread = threading.Thread(target=monitor_leg, args=('PE', sell_price_pe, atm_strike - STRIKE_DIFFERENCE,stop_event, api_websocket))
 
 
 
                 ce_thread.start()
                 pe_thread.start()
 
-                strategy_thread = threading.Thread(target=monitor_strategy, args=(stop_event,)) # static uncomment
+                strategy_thread = threading.Thread(target=monitor_strategy, args=(stop_event, api_websocket)) # static uncomment
                 strategy_thread.start() # static uncomment
 
                 ce_thread.join()
@@ -572,13 +456,14 @@ def run_strategy(stop_event):
     return True
 
 
-def start_the_strategy(even):
+def start_the_strategy(stop_event):
         global api
         """Cancel order logic."""
         try:
             api = getshoonyatradeapi()
+            api_websocket = OpenWebSocket(api)
             print(' data')
-            run_strategy(even)
+            run_strategy(stop_event, api_websocket)
             return True
         except TypeError as e:
             print(f"Type error: {e}")
