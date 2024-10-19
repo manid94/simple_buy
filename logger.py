@@ -139,3 +139,14 @@ class ThrottlingLogger:
                     message.get('avgprc', 0),
                     message.get('status', 'S')
                 )
+
+
+
+
+
+def generate_and_update_file(data, logger):
+    # Generate log entry and append to log
+    new_entry = logger.generate_log_entry(data)
+    logger.append_log(new_entry)
+    return True
+

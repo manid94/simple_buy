@@ -6,7 +6,7 @@ import hashlib
 from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete
 from brokerapi import getshoonyatradeapi
 from datetime import date, datetime
-from logger import LocalJsonLogger, ThrottlingLogger
+from logger import LocalJsonLogger, ThrottlingLogger, generate_and_update_file
 from api_websocket import OpenWebSocket
 
 # flag to tell us if the api_websocket is open
@@ -82,12 +82,6 @@ api = {}
 
 logger = {}
 
-
-def generate_and_update_file(data):
-    # Generate log entry and append to log
-    new_entry = logger.generate_log_entry(data)
-    logger.append_log(new_entry)
-    return True
 
 def logger_entry(tsymbol, orderno, direction, order_type, qty, ordered_price, order_method='UnKn', fillqty='none', avg_price='0', status='placed'):
     # Using a dictionary for clear and structured data logging
@@ -202,8 +196,10 @@ def calculate_total_pnl(api_websocket):
     ce_pnl = calculate_leg_pnl('CE', 'BUY_BACK', BUY_BACK_LOTS, api_websocket)
     pe_pnl = calculate_leg_pnl('PE', 'BUY_BACK', BUY_BACK_LOTS, api_websocket)
     ce_re_entry_pnl = calculate_leg_pnl('CE', 'RE_ENTRY', INITIAL_LOTS, api_websocket)
-    pe_re_entry_pnl = calculate_leg_pnl('CE', 'RE_ENTRY', INITIAL_LOTS, api_websocket)
-    return ce_pnl + pe_pnl + ce_entry_pnl + pe_entry_pnl + ce_re_entry_pnl + pe_re_entry_pnl  
+    pe_re_entry_pnl = calculate_leg_pnl('PE', 'RE_ENTRY', INITIAL_LOTS, api_websocket)  # Corrected to 'PE'
+    
+    return ce_pnl + pe_pnl + ce_entry_pnl + pe_entry_pnl + ce_re_entry_pnl + pe_re_entry_pnl
+
 
 def check_unsold_lots(id, api_websocket):
     fill = float(api_websocket.ORDER_STATUS[id]['flqty'])
