@@ -284,9 +284,14 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
 def monitor_strategy(stop_event, api_websocket):
     global strategy_running, exited_strategy
     print('monitor_strategy ')
+    end_time = ist_datatime.replace(hour=EXIT_TIME['hours'], minute=EXIT_TIME['minutes'], second=EXIT_TIME['seconds'], microsecond=0).time()
     while strategy_running:
         if exited_strategy or stop_event.is_set():
             break
+        
+        current_time = datetime.now(ist).time()
+        if current_time >= end_time:
+            exit_strategy(api_websocket)
         pnl = calculate_total_pnl(api_websocket)  # Fetch the PNL
         if pnl >= TARGET_PROFIT and not exited_strategy:
             print(f"Target profit of ₹{TARGET_PROFIT} reached. Exiting strategy.")
