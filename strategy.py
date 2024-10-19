@@ -6,7 +6,7 @@ import hashlib
 from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete
 from brokerapi import getshoonyatradeapi
 from datetime import date, datetime
-from logger import LocalJsonLogger
+from logger import LocalJsonLogger, ThrottlingLogger
 from api_websocket import OpenWebSocket
 
 # flag to tell us if the api_websocket is open
@@ -82,7 +82,14 @@ api = {}
 
 logger = {}
 
-def logger_entry(tsymbol, orderno, direction, order_type, qty, ordered_price, order_method, fillqty, avg_price, status):
+
+def generate_and_update_file(data):
+    # Generate log entry and append to log
+    new_entry = logger.generate_log_entry(data)
+    logger.append_log(new_entry)
+    return True
+
+def logger_entry(tsymbol, orderno, direction, order_type, qty, ordered_price, order_method='UnKn', fillqty='none', avg_price='0', status='placed'):
     # Using a dictionary for clear and structured data logging
     datas = {
         "symbol": tsymbol,
@@ -96,11 +103,8 @@ def logger_entry(tsymbol, orderno, direction, order_type, qty, ordered_price, or
         "average_price": avg_price,
         "status": status
     }
-    
-    # Generate log entry and append to log
-    new_entry = logger.generate_log_entry(datas)
-    logger.append_log(new_entry)
-    
+    loggerThread = threading.Thread(target=generate_and_update_file, args=(datas,))
+    loggerThread.start()    
     return True
 
 
@@ -238,7 +242,8 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
             logger_entry(ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,'B',option_type,buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
             CURRENT_STRATEGY_ORDERS.append(buy_back_order_id)
 
-            while not is_order_complete(buy_back_order_id, ORDER_STATUS):
+            temp_log1 = ThrottlingLogger(buy_back_order_id, logger_entry)
+            while not is_order_complete(buy_back_order_id, ORDER_STATUS, temp_log1):
                 time.sleep(0.25)
             buy_back_avg_price = ORDER_STATUS[buy_back_order_id]['avgprc']
             PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_BUY_'+option_type] = buy_back_avg_price
@@ -247,8 +252,8 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
             logger_entry(ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,'S',option_type,buy_back_lots,sell_target_price, 'LMT',   0,0,  'placed')
             print(f'OUTSIDE sell_target_order_id {sell_target_order_id}')
             CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
-
-            while not is_order_complete(sell_target_order_id, ORDER_STATUS): #static instead check weather ltp > selltarget_price
+            temp_log2 = ThrottlingLogger(sell_target_order_id, logger_entry)
+            while not is_order_complete(sell_target_order_id, ORDER_STATUS, temp_log2): #static instead check weather ltp > selltarget_price
                 if exited_strategy or stop_event.is_set():
                     break
                 ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
@@ -300,15 +305,20 @@ def monitor_strategy(stop_event, api_websocket):
 
 # Retry logic with a maximum number of attempts to avoid an infinite loop
 def wait_for_orders_to_complete(order_ids, api_websocket, max_retries=100):
+    global logger
     ORDER_STATUS = api_websocket.ORDER_STATUS
     attempts = 0
-
+    update_log = {}
+    
     # Ensure order_ids is always treated as a list
     if isinstance(order_ids, str):
         order_ids = [order_ids]
+    
+    for order_id in order_ids:
+        update_log[order_id] = ThrottlingLogger(order_id, logger_entry)
 
     # Loop until all orders are complete or max_retries is reached
-    while not all(is_order_complete(order_id, ORDER_STATUS) for order_id in order_ids):
+    while not all(is_order_complete(order_id, ORDER_STATUS, update_log[order_id]) for order_id in order_ids):
         # Sleep for 0.25 seconds
         time.sleep(0.25)
         attempts += 1

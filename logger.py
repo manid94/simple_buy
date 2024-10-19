@@ -2,6 +2,10 @@ import json
 import datetime
 import random
 import os
+import threading
+import copy
+from deepdiff import DeepDiff
+
 
 class LocalJsonLogger:
     def __init__(self):
@@ -94,3 +98,44 @@ class LocalJsonLogger:
 #     for _ in range(10):  # Simulate 10 log entries
 #         new_entry = logger.generate_log_entry()
 #         logger.append_log(new_entry)
+
+
+class ThrottlingLogger:
+    def __init__(self, orderid, logger):
+        self.orderno = orderid
+        self.logger = logger
+        self.previousLogger = {}
+        self.lock = threading.Lock()  # Lock to ensure thread safety
+    
+    def loggerentry(self, ORDER_STATUS):
+        # Start a new thread for each logger entry
+        initialize_threading = threading.Thread(target=self.check_update_thread, args=(ORDER_STATUS,))
+        initialize_threading.start()  # Start the thread
+
+    def check_update_thread(self, ORDER_STATUS):
+        with self.lock:  # Ensure thread safety when accessing shared data
+            # If the order ID hasn't been logged yet, initialize it
+            if self.orderno not in self.previousLogger:
+                self.previousLogger[self.orderno] = {}
+
+            # Perform deep comparison to see if there are any differences
+            diff = DeepDiff(self.previousLogger[self.orderno], ORDER_STATUS.get(self.orderno, {}))
+            
+            if not diff:
+                # Update the previous logger with a deep copy of the current state
+                self.previousLogger[self.orderno] = copy.deepcopy(ORDER_STATUS[self.orderno])
+            else:
+                # If there's a difference, log the new status and update the previous logger
+                message = ORDER_STATUS[self.orderno]
+                self.logger(
+                    message.get('tsym', 0),
+                    message.get('norenordno'),
+                    message.get('trantype', 'U'),
+                    message.get('remarks', 'exit'),
+                    message.get('qty', 0),
+                    message.get('prc', 0),
+                    message.get('prctyp', 'LMT'),
+                    message.get('flqty', 0),
+                    message.get('avgprc', 0),
+                    message.get('status', 'S')
+                )
