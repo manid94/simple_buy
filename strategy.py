@@ -8,6 +8,7 @@ from brokerapi import getshoonyatradeapi
 from datetime import date, datetime
 from logger import LocalJsonLogger, ThrottlingLogger, generate_and_update_file
 from api_websocket import OpenWebSocket
+from custom_threading import MyThread
 
 # flag to tell us if the api_websocket is open
 
@@ -27,8 +28,8 @@ SELL_TARGET_PERCENTAGE = 0.02
 BUY_BACK_LOSS_PERCENTAGE = 0.93
 AVAILABLE_MARGIN = 25000
 ENTRY_TIME = {
-    'hours': 11,
-    'minutes': 2,
+    'hours': 9,
+    'minutes': 33,
     'seconds': 0
 }
 EXIT_TIME = {
@@ -97,7 +98,7 @@ def logger_entry(tsymbol, orderno, direction, order_type, qty, ordered_price, or
         "average_price": avg_price,
         "status": status
     }
-    loggerThread = threading.Thread(target=generate_and_update_file, args=(datas,))
+    loggerThread = MyThread(target=generate_and_update_file, args=(datas, logger))
     loggerThread.start()    
     return True
 
@@ -238,8 +239,8 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
             logger_entry(ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,'B',option_type,buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
             CURRENT_STRATEGY_ORDERS.append(buy_back_order_id)
 
-            temp_log1 = ThrottlingLogger(buy_back_order_id, logger_entry)
-            while not is_order_complete(buy_back_order_id, ORDER_STATUS, temp_log1):
+            log1 = ThrottlingLogger(buy_back_order_id, logger_entry)
+            while not is_order_complete(buy_back_order_id, ORDER_STATUS, log1):
                 time.sleep(0.25)
             buy_back_avg_price = ORDER_STATUS[buy_back_order_id]['avgprc']
             PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_BUY_'+option_type] = buy_back_avg_price
@@ -248,8 +249,8 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
             logger_entry(ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,'S',option_type,buy_back_lots,sell_target_price, 'LMT',   0,0,  'placed')
             print(f'OUTSIDE sell_target_order_id {sell_target_order_id}')
             CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
-            temp_log2 = ThrottlingLogger(sell_target_order_id, logger_entry)
-            while not is_order_complete(sell_target_order_id, ORDER_STATUS, temp_log2): #static instead check weather ltp > selltarget_price
+            log2 = ThrottlingLogger(sell_target_order_id, logger_entry)
+            while not is_order_complete(sell_target_order_id, ORDER_STATUS, log2): #static instead check weather ltp > selltarget_price
                 if exited_strategy or stop_event.is_set():
                     break
                 ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
@@ -291,42 +292,57 @@ def monitor_strategy(stop_event, api_websocket):
             print(f"Target profit of ₹{TARGET_PROFIT} reached. Exiting strategy.")
             # strategy_running = False
             exit_strategy(api_websocket)
+            break
         elif pnl <= -MAX_LOSS and not exited_strategy:
             print(f"Max loss of ₹{MAX_LOSS} reached. Exiting strategy.")
             # strategy_running = False
             exit_strategy(api_websocket)
             print('checking pnl')
+            break
         time.sleep(5)  # Check PNL every 5 seconds
+    return True
 
 
-# Retry logic with a maximum number of attempts to avoid an infinite loop
-def wait_for_orders_to_complete(order_ids, api_websocket, max_retries=100):
+def wait_for_orders_to_complete(order_ids, api_websocket, max_retries=100, sleep_interval=0.25):
     global logger
     ORDER_STATUS = api_websocket.ORDER_STATUS
     attempts = 0
     update_log = {}
-    
+    completed_orders = {order_id: False for order_id in order_ids}  # Track which orders are completed
+
     # Ensure order_ids is always treated as a list
     if isinstance(order_ids, str):
         order_ids = [order_ids]
     
+    # Initialize logging for each order
     for order_id in order_ids:
         update_log[order_id] = ThrottlingLogger(order_id, logger_entry)
 
-    # Loop until all orders are complete or max_retries is reached
-    while not all(is_order_complete(order_id, ORDER_STATUS, update_log[order_id]) for order_id in order_ids):
-        # Sleep for 0.25 seconds
-        time.sleep(0.25)
+    # Retry loop until all orders are complete or max_retries is reached
+    while not all(completed_orders.values()):
         attempts += 1
 
+        for order_id in order_ids:
+            if not completed_orders[order_id]:
+                # Check the order status only if it's not already completed
+                completed_orders[order_id] = is_order_complete(order_id, ORDER_STATUS, update_log[order_id])
+        
+        if all(completed_orders.values()):
+            # If all orders are complete
+            print("All orders are complete.")
+            return True
+
+        # Sleep before the next attempt
+        time.sleep(sleep_interval)
+        
         # Check if maximum retries reached
         if attempts >= max_retries:
-            print(f"Max retries reached. Orders may not be complete: {', '.join(order_ids)}")
-            raise ValueError(f"Max retries reached. Orders may not be complete: {', '.join(order_ids)}")
+            incomplete_orders = [order_id for order_id, is_complete in completed_orders.items() if not is_complete]
+            print(f"Max retries reached. Orders may not be complete: {', '.join(incomplete_orders)}")
+            raise ValueError(f"Max retries reached. Orders may not be complete: {', '.join(incomplete_orders)}")
 
-    # If all orders are complete
-    print("All orders are complete.")
-    return True
+        # Optionally increase the sleep interval exponentially to reduce API stress
+        sleep_interval = min(sleep_interval * 1.5, 2)  # Increase the sleep interval with a cap at 2 seconds
 
 # Function to exit the strategy
 def exit_strategy(api_websocket):
@@ -437,22 +453,37 @@ def run_strategy(stop_event, api_websocket):
                 PRICE_DATA['PE_PRICE_DATA']['INITIAL_SELL_PE'] = 0
 
                 strategy_running = True
-                
-                ce_thread = threading.Thread(target=monitor_leg, args=('CE', sell_price_ce, atm_strike + STRIKE_DIFFERENCE,stop_event, api_websocket))
-                pe_thread = threading.Thread(target=monitor_leg, args=('PE', sell_price_pe, atm_strike - STRIKE_DIFFERENCE,stop_event, api_websocket))
+
+                ce_thread = MyThread(target=monitor_leg, args=('CE', sell_price_ce, atm_strike + STRIKE_DIFFERENCE,stop_event, api_websocket))
+                pe_thread = MyThread(target=monitor_leg, args=('PE', sell_price_pe, atm_strike - STRIKE_DIFFERENCE,stop_event, api_websocket))
+                strategy_thread = MyThread(target=monitor_strategy, args=(stop_event, api_websocket)) # static uncomment
 
 
 
-                ce_thread.start()
-                pe_thread.start()
 
-                strategy_thread = threading.Thread(target=monitor_strategy, args=(stop_event, api_websocket)) # static uncomment
-                strategy_thread.start() # static uncomment
+                try:
+                    ce_thread.start()
+                    pe_thread.start()              
+                    strategy_thread.start() # static uncomment
+                    ce_thread.join()
+                    pe_thread.join()
+                    # dynamic_data.join()
+                    strategy_thread.join() # static uncomment
+                except TypeError as e:
+                    print(f"Type error customR: {e}")
+                    return None
+                except ZeroDivisionError as e:
+                    print(f"Math error customSR: {e}")
+                    return None
+                except ValueError as e:
+                    print(f"Value error customVR: {e}")
+                    return None
+                except Exception as e:
+                    # Catch all other exceptions
+                    print(f"An unexpected error occurred: {e}")
+                    return None
 
-                ce_thread.join()
-                pe_thread.join()
-                # dynamic_data.join()
-                strategy_thread.join() # static uncomment
+
 
         else:
             print("Outside trading hours, strategy paused.")
@@ -472,13 +503,13 @@ def start_the_strategy(stop_event):
             run_strategy(stop_event, api_websocket)
             return True
         except TypeError as e:
-            print(f"Type error: {e}")
+            print(f"Type error custom: {e}")
             return None
         except ZeroDivisionError as e:
-            print(f"Math error: {e}")
+            print(f"Math error customS: {e}")
             return None
         except ValueError as e:
-            print(f"Value error: {e}")
+            print(f"Value error customV: {e}")
             return None
         except Exception as e:
             # Catch all other exceptions

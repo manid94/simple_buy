@@ -43,7 +43,7 @@ def main():
             entry_happened_today = True
             print("Strategy has started.")
 
-        if current_time > end_time and entry_happened_today:
+        if current_time > end_time:
             print("Stopping strategy thread.")
             stop_event.set()  # Signal the thread to stop
             try:

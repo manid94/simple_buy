@@ -144,9 +144,9 @@ class ThrottlingLogger:
 
 
 
-def generate_and_update_file(data, logger):
+def generate_and_update_file(data, logger_class):
     # Generate log entry and append to log
-    new_entry = logger.generate_log_entry(data)
-    logger.append_log(new_entry)
+    new_entry = logger_class.generate_log_entry(data)
+    logger_class.append_log(new_entry)
     return True
 
