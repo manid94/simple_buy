@@ -50,8 +50,9 @@ def place_market_exit(api, tsym, type, lots):
 
 
 # Function to check if the order status is complete
-def is_order_complete(order_id, ORDER_STATUS):
+def is_order_complete(order_id, ORDER_STATUS, logger):
     # Check if the order exists in the ORDER_STATUS dictionary
+    logger(ORDER_STATUS)
     if order_id in ORDER_STATUS:
         return ORDER_STATUS[order_id].get('status').lower() == 'complete'
     return False
@@ -61,7 +62,7 @@ def is_order_complete(order_id, ORDER_STATUS):
 def is_order_cancelled(order_id, ORDER_STATUS):
     # Check if the order exists in the ORDER_STATUS dictionary
     if order_id in ORDER_STATUS:
-        return ORDER_STATUS[order_id].get('status').lower() == 'complete'
+        return ORDER_STATUS[order_id].get('status').lower() == 'cancelled'
     return False
 
 

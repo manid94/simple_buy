@@ -1,6 +1,9 @@
-functions-framework==3.*
-google-cloud-storage>=2.10.0
-pytotp>=3
-websocket-client>=0.53.0
-NorenRestApiPy>=0.0.22
-pyotp>=2.9.0
+functions-framework
+google-cloud-storage
+pytotp
+websocket-client
+NorenRestApiPy
+pyotp
+pytz
+pandas
+deepdiff

@@ -25,7 +25,7 @@ def main():
     # Define the end time as 2:30 PM
     start_time = ist_datatime.replace(hour=TOKENGENERATION_TIME['hours'], minute=TOKENGENERATION_TIME['minutes'], second=TOKENGENERATION_TIME['seconds'], microsecond=0).time()
     end_time = ist_datatime.replace(hour=STRATEGY_CLOSE_TIME['hours'], minute=STRATEGY_CLOSE_TIME['minutes'], second=STRATEGY_CLOSE_TIME['seconds'], microsecond=0).time()
-    entry_happened_today = True
+    entry_happened_today = False
     
     stop_event = threading.Event()
     thread = threading.Thread(target=start_the_strategy, args=(stop_event,))
@@ -33,6 +33,7 @@ def main():
     # Keep running the task periodically until 2:30 PM
     while True:
         current_time = datetime.now(ist).time()
+        print("entered.")
         if(start_time <= current_time <= end_time) and not entry_happened_today:
             print("Starting strategy thread.")
             try:
@@ -42,7 +43,7 @@ def main():
             entry_happened_today = True
             print("Strategy has started.")
 
-        if current_time > end_time and entry_happened_today:
+        if current_time > end_time:
             print("Stopping strategy thread.")
             stop_event.set()  # Signal the thread to stop
             try:
@@ -52,10 +53,10 @@ def main():
             print("Strategy has stopped for today.")
             
             # Reset for the next day
-            time.sleep(60 * 60 * 10)  # Sleep for 6 hours before re-checking
+            time.sleep(60 * 60 * 10)  # Sleep for 10 hours before re-checking
             entry_happened_today = False
             stop_event.clear()  # Clear the stop event flag
-        time.sleep(30) 
+        time.sleep(60) 
     return True
 
 main()
