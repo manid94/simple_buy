@@ -1,0 +1,17 @@
+sudo apt update
+sudo apt install screen
+
+
+Start a new screen session:
+    screen -S mysession
+
+    python3 main.py
+
+Detach from the screen session (this keeps the session and the script running in the background):
+
+    Press Ctrl + A, then press D.
+
+
+Reattach to the screen session (if you want to see your script's progress later):
+
+    screen -r mysession
