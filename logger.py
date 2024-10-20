@@ -9,7 +9,7 @@ from deepdiff import DeepDiff
 
 class LocalJsonLogger:
     def __init__(self):
-        self.log_file_name = f'logger_files/trading_log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json'
+        self.log_file_name = f'logger_files/trading_log_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
         self.log_data = []
 
         # Ensure the directory exists
