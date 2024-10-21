@@ -295,20 +295,20 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
         return True
     except TypeError as e:
         print(f"Type error monitor_leg: {e}")
-        exit_strategy(api_websocket)
+        exit_strategy(api_websocket, stop_event)
         return None
     except ZeroDivisionError as e:
         print(f"Math error monitor_leg: {e}")
-        exit_strategy(api_websocket)
+        exit_strategy(api_websocket, stop_event)
         return None
     except ValueError as e:
         print(f"Value error monitor_leg: {e}")
-        exit_strategy(api_websocket)
+        exit_strategy(api_websocket, stop_event)
         return None
     except Exception as e:
         # Catch all other exceptions
         print(f"An unexpected error occurred monitor_leg: {e}")
-        exit_strategy(api_websocket)
+        exit_strategy(api_websocket, stop_event)
         return None
     
 
@@ -326,44 +326,44 @@ def monitor_strategy(stop_event, api_websocket):
             
             current_time = datetime.now(ist).time()
             if current_time >= end_time:
-                exit_strategy(api_websocket)
+                exit_strategy(api_websocket, stop_event)
             pnl = calculate_total_pnl(api_websocket)  # Fetch the PNL
             if pnl >= TARGET_PROFIT and not exited_strategy:
                 print(f"Target profit of ₹{TARGET_PROFIT} reached. Exiting strategy.")
                 # strategy_running = False
-                exit_strategy(api_websocket)
+                exit_strategy(api_websocket, stop_event)
                 break
             elif pnl <= -MAX_LOSS and not exited_strategy:
                 print(f"Max loss of ₹{MAX_LOSS} reached. Exiting strategy.")
                 # strategy_running = False
-                exit_strategy(api_websocket)
+                exit_strategy(api_websocket, stop_event)
                 print('checking pnl')
                 break
             time.sleep(5)  # Check PNL every 5 seconds
         return True
     except TypeError as e:
         print(f"Type error monitor_leg: {e}")
-        exit_strategy(api_websocket)
+        exit_strategy(api_websocket, stop_event)
         return None
     except ZeroDivisionError as e:
         print(f"Math error monitor_leg: {e}")
-        exit_strategy(api_websocket)
+        exit_strategy(api_websocket, stop_event)
         return None
     except ValueError as e:
         print(f"Value error monitor_leg: {e}")
-        exit_strategy(api_websocket)
+        exit_strategy(api_websocket, stop_event)
         return None
     except Exception as e:
         # Catch all other exceptions
         print(f"An unexpected error occurred monitor_leg: {e}")
-        exit_strategy(api_websocket)
+        exit_strategy(api_websocket, stop_event)
         return None
 
 
 
 
 # Function to exit the strategy
-def exit_strategy(api_websocket):
+def exit_strategy(api_websocket, stop_event):
     try:
         global strategy_running, exited_strategy
         ORDER_STATUS = api_websocket.get_latest_data() 
@@ -432,7 +432,7 @@ def exit_strategy(api_websocket):
                 wait_for_orders_to_complete(order_id, api_websocket, 100)
         # Implement logic to close all open orders and exit strategy
         print("Strategy exited.")
-
+        stop_event.set()
         return True
     except Exception as e:
         # Catch all other exceptions
@@ -455,7 +455,7 @@ def run_strategy(stop_event, api_websocket):
     while not strategy_running:
         current_time = datetime.now(ist).time()
         if current_time >= end_time:
-            exit_strategy()
+            exit_strategy(api_websocket, stop_event)
             break
         if start_time <= current_time <= end_time:
             if not strategy_running:
