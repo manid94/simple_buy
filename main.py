@@ -42,6 +42,8 @@ def main():
                 print(f"Error while starting the strategy: {e}")
             entry_happened_today = True
             print("Strategy has started.")
+        else:
+            print('already running')
 
         if current_time > end_time:
             print("Stopping strategy thread.")

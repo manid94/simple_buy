@@ -31,19 +31,19 @@ class LocalJsonLogger:
         if not os.path.exists(self.log_file_name):
             with open(self.log_file_name, 'w') as file:
                 json.dump([], file, indent=4)
-            print(f"New log file '{self.log_file_name}' created.")
-        else:
-            print(f"Log file '{self.log_file_name}' already exists. Appending to it.")
+            #print(f"New log file '{self.log_file_name}' created.")
+       # else:
+            #print(f"Log file '{self.log_file_name}' already exists. Appending to it.")
 
     def append_log(self, new_entry):
         """Append new log entry and update the file locally."""
         # Add new entry to local log data
         self.log_data.append(new_entry)
-        
+        # print('apended new entry')
         # Update the log file locally
         with open(self.log_file_name, 'w') as file:
             json.dump(self.log_data, file, indent=4)
-        print(f"Appended new entry to '{self.log_file_name}'.")
+        # print(f"Appended new entry to '{self.log_file_name}'.")
                       
     def generate_log_entry(self, datas):
         # Extracting individual values from the datas dictionary
@@ -58,7 +58,7 @@ class LocalJsonLogger:
         avg_price = datas.get("average_price")
         status = datas.get("status")
     
-        print(f'inside generate_log_entry {datas}')
+        # print(f'inside generate_log_entry {datas}')
         """Generate a new log entry with random data (simulating a trading strategy)."""
         return {
             "time": str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
@@ -120,11 +120,14 @@ class ThrottlingLogger:
 
             # Perform deep comparison to see if there are any differences
             diff = DeepDiff(self.previousLogger[self.orderno], ORDER_STATUS.get(self.orderno, {}))
-            
+            #print(f' diff new entry {diff}')
             if not diff:
                 # Update the previous logger with a deep copy of the current state
                 self.previousLogger[self.orderno] = copy.deepcopy(ORDER_STATUS[self.orderno])
             else:
+                
+                # Update the previous logger with a deep copy of the current state
+                self.previousLogger[self.orderno] = copy.deepcopy(ORDER_STATUS[self.orderno])
                 # If there's a difference, log the new status and update the previous logger
                 message = ORDER_STATUS[self.orderno]
                 self.logger(

@@ -3,7 +3,7 @@ import time
 import os, sys
 from urllib.parse import parse_qs, urlparse
 import hashlib
-from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete
+from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots
 from brokerapi import getshoonyatradeapi
 from datetime import date, datetime
 from logger import LocalJsonLogger, ThrottlingLogger, generate_and_update_file
@@ -15,32 +15,32 @@ from custom_threading import MyThread
 
 # Constants Configs
 SYMBOL = 'Nifty bank'
-BUY_BACK_STATIC = False
+BUY_BACK_STATIC = True
 INITIAL_LOTS = 1  # Start with 1 lot
-STRIKE_DIFFERENCE = 400
+STRIKE_DIFFERENCE = 900
 ONE_LOT_QUANTITY = 15  # Number of units per lot in Bank Nifty
 TARGET_PROFIT = 500
 MAX_LOSS = 1000
 MAX_LOSS_PER_LEG = 1200
-SAFETY_STOP_LOSS_PERCENTAGE = 0.83
-BUY_BACK_PERCENTAGE = 0.82
-SELL_TARGET_PERCENTAGE = 0.02
+SAFETY_STOP_LOSS_PERCENTAGE = 0.98
+BUY_BACK_PERCENTAGE = 0.975
+SELL_TARGET_PERCENTAGE = 0.01
 BUY_BACK_LOSS_PERCENTAGE = 0.93
-AVAILABLE_MARGIN = 25000
+AVAILABLE_MARGIN = 2000
 ENTRY_TIME = {
     'hours': 9,
-    'minutes': 33,
+    'minutes': 36,
     'seconds': 0
 }
 EXIT_TIME = {
-    'hours': 14,
+    'hours': 15,
     'minutes': 50,
     'seconds': 0
 
 }
 
 # DYNAMIC CONFIG
-BUY_BACK_LOTS = 6
+BUY_BACK_LOTS = 1
 
 
 
@@ -71,6 +71,7 @@ CURRENT_STRATEGY_ORDERS = []
 
 
 
+
 # Global variables
 strategy_running = False
 exited_strategy = False
@@ -84,8 +85,13 @@ api = {}
 logger = {}
 
 
-def logger_entry(tsymbol, orderno, direction, order_type, qty, ordered_price, order_method='UnKn', fillqty='none', avg_price='0', status='placed'):
+
+
+
+
+def logger_entry(tsymbol, orderno, direction, order_type='u', qty=0, ordered_price=0, order_method='UnKn', fillqty='none', avg_price='0', status='placed'):
     # Using a dictionary for clear and structured data logging
+    # print(f'logger_entry {order_type}')
     datas = {
         "symbol": tsymbol,
         "order_number": orderno,
@@ -99,7 +105,8 @@ def logger_entry(tsymbol, orderno, direction, order_type, qty, ordered_price, or
         "status": status
     }
     loggerThread = MyThread(target=generate_and_update_file, args=(datas, logger))
-    loggerThread.start()    
+    loggerThread.start()
+    # print(f'logger_end {order_type}')    
     return True
 
 
@@ -169,22 +176,14 @@ def calculate_leg_pnl(option_type, type, lots, api_websocket):
         print(f"Error: {node_sell} not found in PRICE_DATAS.")
     
     if node_buy in PRICE_DATAS:
-        # Use the stored price or fetch the last traded price if it's zero
         bought_price_or_ltp_price = PRICE_DATAS[node_buy]
         if bought_price_or_ltp_price == 0:
             bought_price_or_ltp_price = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)
     else:
         print(f"Error: {node_buy} not found in PRICE_DATAS.")
     
-    # Calculate the PNL difference
     difference = float(sold_price_or_ltp_price) - float(bought_price_or_ltp_price)
     
-    # Print the calculated values for debugging
-    # print(f"Sold Price: {sold_price_or_ltp_price}")
-    # print(f"Bought Price: {bought_price_or_ltp_price}")
-    # print(f"PNL Difference: {difference}")
-    
-    # Calculate the PNL considering the number of lots
     pnl = difference * lots * ONE_LOT_QUANTITY
     return pnl
 
@@ -202,19 +201,84 @@ def calculate_total_pnl(api_websocket):
     return ce_pnl + pe_pnl + ce_entry_pnl + pe_entry_pnl + ce_re_entry_pnl + pe_re_entry_pnl
 
 
-def check_unsold_lots(id, api_websocket):
-    fill = float(api_websocket.ORDER_STATUS[id]['flqty'])
-    qty = float(api_websocket.ORDER_STATUS[id]['qty'])
-    return float(qty)-float(fill)
+def check_for_stop_loss(option_type, stop_event, selldetails, buydetails, api_websocket):
+    global PRICE_DATA
+    ORDER_STATUS = api_websocket.get_latest_data()
+    sell_target_order_id = selldetails['sell_target_order_id']
+    buy_back_order_id = buydetails['buy_back_order_id']
+    log_sell = ThrottlingLogger(sell_target_order_id, logger_entry)
+    while not is_order_complete(sell_target_order_id, ORDER_STATUS, log_sell): #static instead check weather ltp > selltarget_price
+        if exited_strategy or stop_event.is_set():
+            break
+        ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
+        legpnl = calculate_leg_pnl(option_type, 'BUY_BACK', BUY_BACK_LOTS, api_websocket)
+        if legpnl <= -MAX_LOSS_PER_LEG or ltp <=  (float(ORDER_STATUS[buy_back_order_id]['avgprc']) * BUY_BACK_LOSS_PERCENTAGE):
+            print(f"{option_type} reached 10% loss, exiting remaining orders.")
+            unsold_lots = check_unsold_lots(sell_target_order_id, api_websocket)
+            api.cancel_order(sell_target_order_id)
+            sell_target_order_id = place_market_order(api, LEG_TOKEN, option_type, 'S', unsold_lots, 'end')
+            print(f'INSIDE sell_order_id :{sell_target_order_id}')
+            print(f'ORDER_STATUS[sell_target_order_id]: {ORDER_STATUS[sell_target_order_id]}')
+            break
+        time.sleep(1)
+    return sell_target_order_id
+    
 
+def sell_at_limit_price(option_type,api_websocket, buydetails):
+    global PRICE_DATA
+    ORDER_STATUS = api_websocket.get_latest_data()
+    buy_back_lots = BUY_BACK_LOTS * ONE_LOT_QUANTITY
+    print(f"{option_type} sell_at_limit_price...0")
+    buy_back_avg_price = buydetails['buy_back_avg_price']
+    sell_target_price = round_to_nearest_0_05(float(buy_back_avg_price) * float(1 + SELL_TARGET_PERCENTAGE))
+    print(f"{option_type} ThrottlingLogger... 2")
+    print(f"{option_type} ThrottlingLogger... 2.1")
+    sell_target_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'S', buy_back_lots, limit_price=sell_target_price, leg_type='end')
+    print(f"{option_type} ThrottlingLogger... 2.2 {sell_target_order_id}")
+    logger_entry(ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,'S',option_type,buy_back_lots,sell_target_price, 'LMT', 0, 0, 'placed')
+    print(f'OUTSIDE sell_target_order_id {sell_target_order_id}')
+    CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
+    print(f"{option_type} ThrottlingLogger... 3")
+
+        
+    return {
+        'sell_target_order_id': sell_target_order_id,
+        'sell_target_price': sell_target_price
+    }
+    
+    
+    
+    
+def buy_at_limit_price(option_type, sell_price, api_websocket):
+    global PRICE_DATA, logger_entry
+    print(f"{option_type} buy_at_limit_price...0")
+    buy_back_lots = BUY_BACK_LOTS * ONE_LOT_QUANTITY
+    ORDER_STATUS = api_websocket.get_latest_data()
+    buy_back_price = round_to_nearest_0_05(float(sell_price) * float(BUY_BACK_PERCENTAGE))
+    print(f"{option_type} reached round_to_nearest_0_05...")
+    buy_back_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'B', buy_back_lots, limit_price=buy_back_price, leg_type='start')
+
+    logger_entry(ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,'B',option_type,buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
+    CURRENT_STRATEGY_ORDERS.append(buy_back_order_id)
+    print(f"{option_type} ThrottlingLogger...0")
+    log_one = ThrottlingLogger(buy_back_order_id, logger_entry)
+    while not is_order_complete(buy_back_order_id, ORDER_STATUS, log_one):
+        time.sleep(0.25)
+    print(f"{option_type} ThrottlingLogger... 1")
+    buy_back_avg_price = ORDER_STATUS[buy_back_order_id]['avgprc']
+    PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_BUY_'+option_type] = buy_back_avg_price
+    return {
+        'buy_back_avg_price' : buy_back_avg_price,
+        'buy_back_order_id' : buy_back_order_id
+    }
 
 
 # Monitor individual leg logic (CE/PE)
 def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket):
-    global strategy_running, PRICE_DATA, exited_strategy
-    ORDER_STATUS = api_websocket.ORDER_STATUS
+    global strategy_running, PRICE_DATA, exited_strategy, logger_entry
+    ORDER_STATUS = api_websocket.get_latest_data()
+    PRICE_DATA[option_type+'_PRICE_DATA']['INITIAL_BUY_'+option_type] = sell_price
     leg_entry = False
-    buy_back_lots = BUY_BACK_LOTS * ONE_LOT_QUANTITY
     print('monitor '+option_type)
     while strategy_running and not leg_entry:
         # print('while check monitor')
@@ -225,57 +289,21 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
             leg_entry = True
 
             print(f"{option_type} reached 76% of sell price, exiting...")
-            # safety_sell_order_id = place_market_order(api, LEG_TOKEN, option_type, 'B', lots, 'end')
-
-            # while not wait_for_orders_to_complete(safety_sell_order_id, api_websocket, 100):
-            #     time.sleep(0.5)
-
-            PRICE_DATA[option_type+'_PRICE_DATA']['INITIAL_BUY_'+option_type] = sell_price
-
-            # CURRENT_STRATEGY_ORDERS.append(safety_sell_order_id)
-            # important need to check for order execution if not succeded then retry with modify 
-            buy_back_price = round_to_nearest_0_05(float(sell_price) * float(BUY_BACK_PERCENTAGE))
-            buy_back_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'B', buy_back_lots, limit_price=buy_back_price, leg_type='start')
-            logger_entry(ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,'B',option_type,buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
-            CURRENT_STRATEGY_ORDERS.append(buy_back_order_id)
-
-            log1 = ThrottlingLogger(buy_back_order_id, logger_entry)
-            while not is_order_complete(buy_back_order_id, ORDER_STATUS, log1):
-                time.sleep(0.25)
-            buy_back_avg_price = ORDER_STATUS[buy_back_order_id]['avgprc']
-            PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_BUY_'+option_type] = buy_back_avg_price
-            sell_target_price = round_to_nearest_0_05(float(buy_back_avg_price) * float(1 + SELL_TARGET_PERCENTAGE))
-            sell_target_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'S', buy_back_lots, limit_price=sell_target_price, leg_type='end')
-            logger_entry(ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,'S',option_type,buy_back_lots,sell_target_price, 'LMT',   0,0,  'placed')
-            print(f'OUTSIDE sell_target_order_id {sell_target_order_id}')
-            CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
-            log2 = ThrottlingLogger(sell_target_order_id, logger_entry)
-            while not is_order_complete(sell_target_order_id, ORDER_STATUS, log2): #static instead check weather ltp > selltarget_price
-                if exited_strategy or stop_event.is_set():
-                    break
-                ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
-                legpnl = calculate_leg_pnl(option_type, 'BUY_BACK', BUY_BACK_LOTS, api_websocket)
-                if legpnl <= -MAX_LOSS_PER_LEG or ltp <=  (float(ORDER_STATUS[buy_back_order_id]['avgprc']) * BUY_BACK_LOSS_PERCENTAGE):
-                    print(f"{option_type} reached 10% loss, exiting remaining orders.")
-                    unsold_lots = check_unsold_lots(sell_target_order_id, api_websocket)
-                    api.cancel_order(sell_target_order_id)
-                    sell_target_order_id = place_market_order(api, LEG_TOKEN, option_type, 'S', unsold_lots, 'end')
-                    print(f'INSIDE sell_order_id :{sell_target_order_id}')
-                    print(f'ORDER_STATUS[sell_target_order_id]: {ORDER_STATUS[sell_target_order_id]}')
-                    break
-                time.sleep(1)
-
- 
+            buydetails = buy_at_limit_price(option_type, sell_price, api_websocket)
+            selldetails = sell_at_limit_price(option_type, api_websocket, buydetails)
+            print(f"{option_type} ThrottlingLogger... 4 {selldetails}")
             if exited_strategy or stop_event.is_set():
-                    break
+                break
+            print(f"{option_type} ThrottlingLogger... 5")
+            
+            sell_target_order_id = check_for_stop_loss(option_type, stop_event, selldetails, buydetails, api_websocket)
+            
             if wait_for_orders_to_complete(sell_target_order_id, api_websocket, 40):
                 CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
-                PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_SELL_'+option_type] = ORDER_STATUS[sell_target_order_id]['avgprc']
-                # re_sell_order_id = place_market_order(api, LEG_TOKEN, option_type, 'S', lots, 'start')
-                # wait_for_orders_to_complete(re_sell_order_id, api_websocket, 100)
-                # CURRENT_STRATEGY_ORDERS.append(re_sell_order_id)
-                # PRICE_DATA[option_type+'_PRICE_DATA']['RE_ENTRY_SELL_'+option_type] = ORDER_STATUS[re_sell_order_id]['avgprc']
-
+                PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_SELL_'+option_type] = float(ORDER_STATUS[sell_target_order_id]['avgprc'])
+                print(f"{option_type} ThrottlingLogger... 6 {sell_target_order_id}, {ORDER_STATUS}")
+            print('end_monitor '+option_type)
+            break
     return True
 
 
@@ -308,51 +336,12 @@ def monitor_strategy(stop_event, api_websocket):
     return True
 
 
-def wait_for_orders_to_complete(order_ids, api_websocket, max_retries=100, sleep_interval=0.25):
-    global logger
-    ORDER_STATUS = api_websocket.ORDER_STATUS
-    attempts = 0
-    update_log = {}
-    completed_orders = {order_id: False for order_id in order_ids}  # Track which orders are completed
 
-    # Ensure order_ids is always treated as a list
-    if isinstance(order_ids, str):
-        order_ids = [order_ids]
-    
-    # Initialize logging for each order
-    for order_id in order_ids:
-        update_log[order_id] = ThrottlingLogger(order_id, logger_entry)
-
-    # Retry loop until all orders are complete or max_retries is reached
-    while not all(completed_orders.values()):
-        attempts += 1
-
-        for order_id in order_ids:
-            if not completed_orders[order_id]:
-                # Check the order status only if it's not already completed
-                completed_orders[order_id] = is_order_complete(order_id, ORDER_STATUS, update_log[order_id])
-        
-        if all(completed_orders.values()):
-            # If all orders are complete
-            print("All orders are complete.")
-            return True
-
-        # Sleep before the next attempt
-        time.sleep(sleep_interval)
-        
-        # Check if maximum retries reached
-        if attempts >= max_retries:
-            incomplete_orders = [order_id for order_id, is_complete in completed_orders.items() if not is_complete]
-            print(f"Max retries reached. Orders may not be complete: {', '.join(incomplete_orders)}")
-            raise ValueError(f"Max retries reached. Orders may not be complete: {', '.join(incomplete_orders)}")
-
-        # Optionally increase the sleep interval exponentially to reduce API stress
-        sleep_interval = min(sleep_interval * 1.5, 2)  # Increase the sleep interval with a cap at 2 seconds
 
 # Function to exit the strategy
 def exit_strategy(api_websocket):
     global strategy_running, exited_strategy
-    ORDER_STATUS = api_websocket.ORDER_STATUS 
+    ORDER_STATUS = api_websocket.get_latest_data() 
     strategy_running = True  # Stop the strategy
     exited_strategy = True
     print('Exiting strategy...')
@@ -427,7 +416,6 @@ def exit_strategy(api_websocket):
 
 def run_strategy(stop_event, api_websocket):
     global strategy_running, sell_price_ce, sell_price_pe, PRICE_DATA, BUY_BACK_LOTS, logger
-    ORDER_STATUS = api_websocket.ORDER_STATUS
     logger = LocalJsonLogger()
     start_time = ist_datatime.replace(hour=ENTRY_TIME['hours'], minute=ENTRY_TIME['minutes'], second=ENTRY_TIME['seconds'], microsecond=0).time()
     end_time = ist_datatime.replace(hour=EXIT_TIME['hours'], minute=EXIT_TIME['minutes'], second=EXIT_TIME['seconds'], microsecond=0).time()
@@ -445,7 +433,7 @@ def run_strategy(stop_event, api_websocket):
                 sell_price_ce = api_websocket.fetch_last_trade_price('CE', LEG_TOKEN)
                 sell_price_pe = api_websocket.fetch_last_trade_price('PE', LEG_TOKEN)
                 print(f'sell_price_ce{sell_price_ce}:sell_price_pe:{sell_price_pe}')
-
+                print('passed atm strike 1')
                 if(not BUY_BACK_STATIC):
                     ce_lot = int(AVAILABLE_MARGIN/(ONE_LOT_QUANTITY * sell_price_ce))
                     pe_lot = int(AVAILABLE_MARGIN/(ONE_LOT_QUANTITY * sell_price_ce))
