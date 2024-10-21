@@ -132,7 +132,7 @@ class ThrottlingLogger:
                 message = ORDER_STATUS[self.orderno]
                 self.logger(
                     message.get('tsym', 0),
-                    message.get('norenordno'),
+                    self.orderno,
                     message.get('trantype', 'U'),
                     message.get('remarks', 'exit'),
                     message.get('qty', 0),
@@ -140,7 +140,7 @@ class ThrottlingLogger:
                     message.get('prctyp', 'LMT'),
                     message.get('flqty', 0),
                     message.get('avgprc', 0),
-                    message.get('status', 'S')
+                    message.get('status', 'update')
                 )
 
 

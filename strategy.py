@@ -462,6 +462,7 @@ def run_strategy(stop_event, api_websocket):
                     pe_thread.join()
                     # dynamic_data.join()
                     strategy_thread.join() # static uncomment
+                    break
                 except TypeError as e:
                     print(f"Type error customR: {e}")
                     return None

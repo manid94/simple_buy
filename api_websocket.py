@@ -36,8 +36,11 @@ class OpenWebSocket:
             GLOBAL_ORDER_STATUS[message['norenordno']]['flqty'] =  message.get('flqty', 0)
             GLOBAL_ORDER_STATUS[message['norenordno']]['qty'] =  message.get('qty', 0)
             GLOBAL_ORDER_STATUS[message['norenordno']]['tsym'] =  message.get('tsym', 0)
+            GLOBAL_ORDER_STATUS[message['norenordno']]['prc'] =  message.get('prc', 0)
+            GLOBAL_ORDER_STATUS[message['norenordno']]['prctyp'] =  message.get('prctyp', 0)
             GLOBAL_ORDER_STATUS[message['norenordno']]['trantype'] =  message.get('trantype', 'S')
             GLOBAL_ORDER_STATUS[message['norenordno']]['option_type'] =  message.get('remarks', 'exit')
+            GLOBAL_ORDER_STATUS[message['norenordno']]['remarks'] =  message.get('remarks', 'exit')
 
             # print('norenordno')
             # print(message['status'].lower())
