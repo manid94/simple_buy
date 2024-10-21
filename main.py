@@ -58,7 +58,7 @@ def main():
             time.sleep(60 * 60 * 10)  # Sleep for 10 hours before re-checking
             entry_happened_today = False
             stop_event.clear()  # Clear the stop event flag
-        time.sleep(60) 
+        time.sleep(180) 
     return True
 
 main()

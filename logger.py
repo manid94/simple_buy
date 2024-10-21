@@ -5,6 +5,7 @@ import os
 import threading
 import copy
 from deepdiff import DeepDiff
+from custom_threading import MyThread
 
 
 class LocalJsonLogger:
@@ -144,12 +145,28 @@ class ThrottlingLogger:
                 )
 
 
-
-
-
 def generate_and_update_file(data, logger_class):
     # Generate log entry and append to log
     new_entry = logger_class.generate_log_entry(data)
     logger_class.append_log(new_entry)
     return True
 
+def logger_entry(tsymbol, orderno, direction, order_type='u', qty=0, ordered_price=0, order_method='UnKn', fillqty='none', avg_price='0', status='placed'):
+    # Using a dictionary for clear and structured data logging
+    # print(f'logger_entry {order_type}')
+    datas = {
+        "symbol": tsymbol,
+        "order_number": orderno,
+        "direction": direction,
+        "order_type": order_type,
+        "quantity": qty,
+        "ordered_price": ordered_price,
+        "order_method": order_method,
+        "filled_quantity": fillqty,
+        "average_price": avg_price,
+        "status": status
+    }
+    loggerThread = MyThread(target=generate_and_update_file, args=(datas, logger))
+    loggerThread.start()
+    # print(f'logger_end {order_type}')    
+    return True

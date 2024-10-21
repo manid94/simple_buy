@@ -1,15 +1,20 @@
-import threading
 import time
 import os, sys
 from urllib.parse import parse_qs, urlparse
 import hashlib
+import logging
 from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots
 from brokerapi import getshoonyatradeapi
 from datetime import date, datetime
-from logger import LocalJsonLogger, ThrottlingLogger, generate_and_update_file
+from logger import LocalJsonLogger, ThrottlingLogger, logger_entry
 from api_websocket import OpenWebSocket
 from custom_threading import MyThread
 
+
+
+
+
+logging.basicConfig(filename='strategy.log', level=logging.ERROR)
 # flag to tell us if the api_websocket is open
 
 
@@ -33,7 +38,7 @@ ENTRY_TIME = {
     'seconds': 0
 }
 EXIT_TIME = {
-    'hours': 15,
+    'hours': 19,
     'minutes': 50,
     'seconds': 0
 
@@ -89,25 +94,7 @@ logger = {}
 
 
 
-def logger_entry(tsymbol, orderno, direction, order_type='u', qty=0, ordered_price=0, order_method='UnKn', fillqty='none', avg_price='0', status='placed'):
-    # Using a dictionary for clear and structured data logging
-    # print(f'logger_entry {order_type}')
-    datas = {
-        "symbol": tsymbol,
-        "order_number": orderno,
-        "direction": direction,
-        "order_type": order_type,
-        "quantity": qty,
-        "ordered_price": ordered_price,
-        "order_method": order_method,
-        "filled_quantity": fillqty,
-        "average_price": avg_price,
-        "status": status
-    }
-    loggerThread = MyThread(target=generate_and_update_file, args=(datas, logger))
-    loggerThread.start()
-    # print(f'logger_end {order_type}')    
-    return True
+
 
 
 # Utility function to fetch the ATM strike price
@@ -261,8 +248,8 @@ def buy_at_limit_price(option_type, sell_price, api_websocket):
     logger_entry(ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,'B',option_type,buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
     CURRENT_STRATEGY_ORDERS.append(buy_back_order_id)
     print(f"{option_type} ThrottlingLogger...0")
-    log_one = ThrottlingLogger(buy_back_order_id, logger_entry)
-    while not is_order_complete(buy_back_order_id, ORDER_STATUS, log_one):
+    log_buy = ThrottlingLogger(buy_back_order_id, logger_entry)
+    while not is_order_complete(buy_back_order_id, ORDER_STATUS, log_buy):
         time.sleep(0.25)
     print(f"{option_type} ThrottlingLogger... 1")
     buy_back_avg_price = ORDER_STATUS[buy_back_order_id]['avgprc']
@@ -275,144 +262,187 @@ def buy_at_limit_price(option_type, sell_price, api_websocket):
 
 # Monitor individual leg logic (CE/PE)
 def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket):
-    global strategy_running, PRICE_DATA, exited_strategy, logger_entry
-    ORDER_STATUS = api_websocket.get_latest_data()
-    PRICE_DATA[option_type+'_PRICE_DATA']['INITIAL_BUY_'+option_type] = sell_price
-    leg_entry = False
-    print('monitor '+option_type)
-    while strategy_running and not leg_entry:
-        # print('while check monitor')
-        ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
-        if exited_strategy or stop_event.is_set():
-            break
-        if ltp <= (float(sell_price) * float(SAFETY_STOP_LOSS_PERCENTAGE)):
-            leg_entry = True
-
-            print(f"{option_type} reached 76% of sell price, exiting...")
-            buydetails = buy_at_limit_price(option_type, sell_price, api_websocket)
-            selldetails = sell_at_limit_price(option_type, api_websocket, buydetails)
-            print(f"{option_type} ThrottlingLogger... 4 {selldetails}")
+    try:
+        global strategy_running, PRICE_DATA, exited_strategy, logger_entry
+        ORDER_STATUS = api_websocket.get_latest_data()
+        PRICE_DATA[option_type+'_PRICE_DATA']['INITIAL_BUY_'+option_type] = sell_price
+        leg_entry = False
+        print('monitor '+option_type)
+        while strategy_running and not leg_entry:
+            # print('while check monitor')
+            ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
             if exited_strategy or stop_event.is_set():
                 break
-            print(f"{option_type} ThrottlingLogger... 5")
-            
-            sell_target_order_id = check_for_stop_loss(option_type, stop_event, selldetails, buydetails, api_websocket)
-            
-            if wait_for_orders_to_complete(sell_target_order_id, api_websocket, 40):
-                CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
-                PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_SELL_'+option_type] = float(ORDER_STATUS[sell_target_order_id]['avgprc'])
-                print(f"{option_type} ThrottlingLogger... 6 {sell_target_order_id}, {ORDER_STATUS}")
-            print('end_monitor '+option_type)
-            break
-    return True
+            if ltp <= (float(sell_price) * float(SAFETY_STOP_LOSS_PERCENTAGE)):
+                leg_entry = True
+
+                print(f"{option_type} reached 76% of sell price, exiting...")
+                buydetails = buy_at_limit_price(option_type, sell_price, api_websocket)
+                selldetails = sell_at_limit_price(option_type, api_websocket, buydetails)
+                print(f"{option_type} ThrottlingLogger... 4 {selldetails}")
+                if exited_strategy or stop_event.is_set():
+                    break
+                print(f"{option_type} ThrottlingLogger... 5")
+                
+                sell_target_order_id = check_for_stop_loss(option_type, stop_event, selldetails, buydetails, api_websocket)
+                
+                if wait_for_orders_to_complete(sell_target_order_id, api_websocket, 40, 0.25):
+                    CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
+                    PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_SELL_'+option_type] = float(ORDER_STATUS[sell_target_order_id]['avgprc'])
+                    print(f"{option_type} ThrottlingLogger... 6 {sell_target_order_id}, {ORDER_STATUS}")
+                print('end_monitor '+option_type)
+                break
+        return True
+    except TypeError as e:
+        print(f"Type error monitor_leg: {e}")
+        exit_strategy(api_websocket)
+        return None
+    except ZeroDivisionError as e:
+        print(f"Math error monitor_leg: {e}")
+        exit_strategy(api_websocket)
+        return None
+    except ValueError as e:
+        print(f"Value error monitor_leg: {e}")
+        exit_strategy(api_websocket)
+        return None
+    except Exception as e:
+        # Catch all other exceptions
+        print(f"An unexpected error occurred monitor_leg: {e}")
+        exit_strategy(api_websocket)
+        return None
+    
 
 
 
 # Function to monitor the strategy
 def monitor_strategy(stop_event, api_websocket):
-    global strategy_running, exited_strategy
-    print('monitor_strategy ')
-    end_time = ist_datatime.replace(hour=EXIT_TIME['hours'], minute=EXIT_TIME['minutes'], second=EXIT_TIME['seconds'], microsecond=0).time()
-    while strategy_running:
-        if exited_strategy or stop_event.is_set():
-            break
-        
-        current_time = datetime.now(ist).time()
-        if current_time >= end_time:
-            exit_strategy(api_websocket)
-        pnl = calculate_total_pnl(api_websocket)  # Fetch the PNL
-        if pnl >= TARGET_PROFIT and not exited_strategy:
-            print(f"Target profit of ₹{TARGET_PROFIT} reached. Exiting strategy.")
-            # strategy_running = False
-            exit_strategy(api_websocket)
-            break
-        elif pnl <= -MAX_LOSS and not exited_strategy:
-            print(f"Max loss of ₹{MAX_LOSS} reached. Exiting strategy.")
-            # strategy_running = False
-            exit_strategy(api_websocket)
-            print('checking pnl')
-            break
-        time.sleep(5)  # Check PNL every 5 seconds
-    return True
+    try:
+        global strategy_running, exited_strategy
+        print('monitor_strategy ')
+        end_time = ist_datatime.replace(hour=EXIT_TIME['hours'], minute=EXIT_TIME['minutes'], second=EXIT_TIME['seconds'], microsecond=0).time()
+        while strategy_running:
+            if exited_strategy or stop_event.is_set():
+                break
+            
+            current_time = datetime.now(ist).time()
+            if current_time >= end_time:
+                exit_strategy(api_websocket)
+            pnl = calculate_total_pnl(api_websocket)  # Fetch the PNL
+            if pnl >= TARGET_PROFIT and not exited_strategy:
+                print(f"Target profit of ₹{TARGET_PROFIT} reached. Exiting strategy.")
+                # strategy_running = False
+                exit_strategy(api_websocket)
+                break
+            elif pnl <= -MAX_LOSS and not exited_strategy:
+                print(f"Max loss of ₹{MAX_LOSS} reached. Exiting strategy.")
+                # strategy_running = False
+                exit_strategy(api_websocket)
+                print('checking pnl')
+                break
+            time.sleep(5)  # Check PNL every 5 seconds
+        return True
+    except TypeError as e:
+        print(f"Type error monitor_leg: {e}")
+        exit_strategy(api_websocket)
+        return None
+    except ZeroDivisionError as e:
+        print(f"Math error monitor_leg: {e}")
+        exit_strategy(api_websocket)
+        return None
+    except ValueError as e:
+        print(f"Value error monitor_leg: {e}")
+        exit_strategy(api_websocket)
+        return None
+    except Exception as e:
+        # Catch all other exceptions
+        print(f"An unexpected error occurred monitor_leg: {e}")
+        exit_strategy(api_websocket)
+        return None
 
 
 
 
 # Function to exit the strategy
 def exit_strategy(api_websocket):
-    global strategy_running, exited_strategy
-    ORDER_STATUS = api_websocket.get_latest_data() 
-    strategy_running = True  # Stop the strategy
-    exited_strategy = True
-    print('Exiting strategy...')
-    print('Current ORDER_STATUS:', ORDER_STATUS)
+    try:
+        global strategy_running, exited_strategy
+        ORDER_STATUS = api_websocket.get_latest_data() 
+        strategy_running = True  # Stop the strategy
+        exited_strategy = True
+        print('Exiting strategy...')
+        print('Current ORDER_STATUS:', ORDER_STATUS)
 
-    # Initialize totals and symbol tracking for CE and PE
-    totals = {'CE': 0, 'PE': 0}
-    symbols = {'CE': '', 'PE': ''}
+        # Initialize totals and symbol tracking for CE and PE
+        totals = {'CE': 0, 'PE': 0}
+        symbols = {'CE': '', 'PE': ''}
 
-        # Filter unique values using set
-    unique_orders = set(CURRENT_STRATEGY_ORDERS)
+            # Filter unique values using set
+        unique_orders = set(CURRENT_STRATEGY_ORDERS)
 
-    # Cancel incomplete orders and calculate totals for completed orders
-    for key in unique_orders:
-        order = ORDER_STATUS.get(key)
-        if not order:
-            print(f"Order {key} not found in ORDER_STATUS, skipping...")
-            continue
-
-        status = order.get('status', '').lower()
-
-        if status not in ['open', 'pending', 'complete']:
-            print(f"Order {key} has an invalid status '{status}', skipping...")
-            continue
-        
-        # Cancel any order that is not complete
-    
-        qty = float(order['qty'])
-        tsym = order['tsym']
-        typ = order['trantype']
-        option_info = order.get('option_type', '').split()
-        if len(option_info) < 2:
-            print(f"Invalid option_type format for order {key}, skipping...")
-            continue
-        option_type, leg_type = option_info[0], option_info[1]
-        print(f"Calculation data: Leg Type: {leg_type}, Status: {status}, Option Type: {option_type}, Qty: {qty}, Type: {typ}")
-
-        if status in ['open', 'pending']:
-            print(f"Canceling incomplete order: {key}")
-            api.cancel_order(key)
-            if leg_type == 'start': #if it is initial order and not executed then its quantity shouldn't be considered
+        # Cancel incomplete orders and calculate totals for completed orders
+        for key in unique_orders:
+            order = ORDER_STATUS.get(key)
+            if not order:
+                print(f"Order {key} not found in ORDER_STATUS, skipping...")
                 continue
-            qty = float(order['flqty'])
-            print(f"Adjusted sold quantity: {qty}")
+
+            status = order.get('status', '').lower()
+
+            if status not in ['open', 'pending', 'complete']:
+                print(f"Order {key} has an invalid status '{status}', skipping...")
+                continue
+            
+            # Cancel any order that is not complete
         
+            qty = float(order['qty'])
+            tsym = order['tsym']
+            typ = order['trantype']
+            option_info = order.get('option_type', '').split()
+            if len(option_info) < 2:
+                print(f"Invalid option_type format for order {key}, skipping...")
+                continue
+            option_type, leg_type = option_info[0], option_info[1]
+            print(f"Calculation data: Leg Type: {leg_type}, Status: {status}, Option Type: {option_type}, Qty: {qty}, Type: {typ}")
+
+            if status in ['open', 'pending']:
+                print(f"Canceling incomplete order: {key}")
+                api.cancel_order(key)
+                if leg_type == 'start': #if it is initial order and not executed then its quantity shouldn't be considered
+                    continue
+                qty = float(order['flqty'])
+                print(f"Adjusted sold quantity: {qty}")
+            
+            
+            # Update total quantities for completed orders
+            if option_type in totals:
+                if typ == 'S':
+                    totals[option_type] -= qty
+                elif typ == 'B':
+                    totals[option_type] += qty
+                symbols[option_type] = tsym
+
+        print(f"Totals: {totals}, Symbols: {symbols}")
+        # Place market exit orders for remaining positions
+        for option_type, total in totals.items():
+            if total != 0:
+                buy_or_sell = 'S' if total > 0 else 'B'
+                tsym = symbols[option_type]
+                print(f"Placing market exit for {option_type}: {buy_or_sell} {abs(total)} lots")
+                order_id = place_market_exit(api, tsym, buy_or_sell, abs(total))
+                wait_for_orders_to_complete(order_id, api_websocket, 100)
+        # Implement logic to close all open orders and exit strategy
+        print("Strategy exited.")
+
+        return True
+    except Exception as e:
+        # Catch all other exceptions
+        print(f"An unexpected error occurred exit_strategy: {e}")
+        return None
+
+
+
         
-        # Update total quantities for completed orders
-        if option_type in totals:
-            if typ == 'S':
-                totals[option_type] -= qty
-            elif typ == 'B':
-                totals[option_type] += qty
-            symbols[option_type] = tsym
 
-    print(f"Totals: {totals}, Symbols: {symbols}")
-    # Place market exit orders for remaining positions
-    for option_type, total in totals.items():
-        if total != 0:
-            buy_or_sell = 'S' if total > 0 else 'B'
-            tsym = symbols[option_type]
-            print(f"Placing market exit for {option_type}: {buy_or_sell} {abs(total)} lots")
-            order_id = place_market_exit(api, tsym, buy_or_sell, abs(total))
-            wait_for_orders_to_complete(order_id, api_websocket, 100)
-
-    return True
-
-
-
-    
-    # Implement logic to close all open orders and exit strategy
-    print("Strategy exited.")
 
 def run_strategy(stop_event, api_websocket):
     global strategy_running, sell_price_ce, sell_price_pe, PRICE_DATA, BUY_BACK_LOTS, logger
@@ -425,6 +455,7 @@ def run_strategy(stop_event, api_websocket):
     while not strategy_running:
         current_time = datetime.now(ist).time()
         if current_time >= end_time:
+            exit_strategy()
             break
         if start_time <= current_time <= end_time:
             if not strategy_running:
@@ -486,28 +517,27 @@ def run_strategy(stop_event, api_websocket):
         
     return True
 
-
 def start_the_strategy(stop_event):
-        global api
-        """Cancel order logic."""
-        try:
-            api = getshoonyatradeapi()
-            api_websocket = OpenWebSocket(api)
-            print(' data')
-            run_strategy(stop_event, api_websocket)
-            return True
-        except TypeError as e:
-            print(f"Type error custom: {e}")
-            return None
-        except ZeroDivisionError as e:
-            print(f"Math error customS: {e}")
-            return None
-        except ValueError as e:
-            print(f"Value error customV: {e}")
-            return None
-        except Exception as e:
-            # Catch all other exceptions
-            print(f"An unexpected error occurred: {e}")
-            return None
-
-
+    global api
+    try:
+        api = getshoonyatradeapi()
+        api_websocket = OpenWebSocket(api)
+        logging.info('Starting WebSocket data connection...')
+        
+        while not api_websocket.socket_opened:
+            time.sleep(0.1)
+        
+        run_strategy(stop_event, api_websocket)
+        return True
+    except TypeError as e:
+        logging.error(f"Type error occurred: {e}")
+        return None
+    except ZeroDivisionError as e:
+        logging.error(f"Math error occurred: {e}")
+        return None
+    except ValueError as e:
+        logging.error(f"Value error occurred: {e}")
+        return None
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+        return None
