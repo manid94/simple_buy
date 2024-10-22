@@ -194,7 +194,7 @@ def check_for_stop_loss(option_type, stop_event, selldetails, buydetails, api_we
     sell_target_order_id = selldetails['sell_target_order_id']
     buy_back_order_id = buydetails['buy_back_order_id']
     log_sell = ThrottlingLogger(sell_target_order_id, logger_entry)
-    while not is_order_complete(sell_target_order_id, ORDER_STATUS, log_sell): #static instead check weather ltp > selltarget_price
+    while not is_order_complete(sell_target_order_id, ORDER_STATUS, log_sell ,logger): #static instead check weather ltp > selltarget_price
         if exited_strategy or stop_event.is_set():
             break
         ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
@@ -222,7 +222,7 @@ def sell_at_limit_price(option_type,api_websocket, buydetails):
     print(f"{option_type} ThrottlingLogger... 2.1")
     sell_target_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'S', buy_back_lots, limit_price=sell_target_price, leg_type='end')
     print(f"{option_type} ThrottlingLogger... 2.2 {sell_target_order_id}")
-    logger_entry(ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,'S',option_type,buy_back_lots,sell_target_price, 'LMT', 0, 0, 'placed')
+    logger_entry(logger, ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,'S',option_type,buy_back_lots,sell_target_price, 'LMT', 0, 0, 'placed')
     print(f'OUTSIDE sell_target_order_id {sell_target_order_id}')
     CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
     print(f"{option_type} ThrottlingLogger... 3")
@@ -245,11 +245,11 @@ def buy_at_limit_price(option_type, sell_price, api_websocket):
     print(f"{option_type} reached round_to_nearest_0_05...")
     buy_back_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'B', buy_back_lots, limit_price=buy_back_price, leg_type='start')
 
-    logger_entry(ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,'B',option_type,buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
+    logger_entry(logger, ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,'B',option_type,buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
     CURRENT_STRATEGY_ORDERS.append(buy_back_order_id)
     print(f"{option_type} ThrottlingLogger...0")
     log_buy = ThrottlingLogger(buy_back_order_id, logger_entry)
-    while not is_order_complete(buy_back_order_id, ORDER_STATUS, log_buy):
+    while not is_order_complete(buy_back_order_id, ORDER_STATUS, log_buy, logger):
         time.sleep(0.25)
     print(f"{option_type} ThrottlingLogger... 1")
     buy_back_avg_price = ORDER_STATUS[buy_back_order_id]['avgprc']
@@ -286,7 +286,7 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
                 
                 sell_target_order_id = check_for_stop_loss(option_type, stop_event, selldetails, buydetails, api_websocket)
                 
-                if wait_for_orders_to_complete(sell_target_order_id, api_websocket, 40, 0.25):
+                if wait_for_orders_to_complete(sell_target_order_id, api_websocket, logger_entry, logger, 40, 0.25):
                     CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
                     PRICE_DATA[option_type+'_PRICE_DATA']['BUY_BACK_SELL_'+option_type] = float(ORDER_STATUS[sell_target_order_id]['avgprc'])
                     print(f"{option_type} ThrottlingLogger... 6 {sell_target_order_id}, {ORDER_STATUS}")
@@ -429,7 +429,7 @@ def exit_strategy(api_websocket, stop_event):
                 tsym = symbols[option_type]
                 print(f"Placing market exit for {option_type}: {buy_or_sell} {abs(total)} lots")
                 order_id = place_market_exit(api, tsym, buy_or_sell, abs(total))
-                wait_for_orders_to_complete(order_id, api_websocket, 100)
+                wait_for_orders_to_complete(order_id, api_websocket, logger_entry, 100)
         # Implement logic to close all open orders and exit strategy
         print("Strategy exited.")
         stop_event.set()
@@ -470,8 +470,8 @@ def run_strategy(stop_event, api_websocket):
                     pe_lot = int(AVAILABLE_MARGIN/(ONE_LOT_QUANTITY * sell_price_ce))
                     BUY_BACK_LOTS = min(ce_lot, pe_lot)
                 
-                logger_entry('CE','orderno','direction','CE',ONE_LOT_QUANTITY,sell_price_ce,'GET MKT',0,0,'start')
-                logger_entry('PE','orderno','direction','PE',ONE_LOT_QUANTITY,sell_price_pe,'GET MKT',0,0,'start')
+                logger_entry(logger, 'CE','orderno','direction','CE',ONE_LOT_QUANTITY,sell_price_ce,'GET MKT',0,0,'start')
+                logger_entry(logger, 'PE','orderno','direction','PE',ONE_LOT_QUANTITY,sell_price_pe,'GET MKT',0,0,'start')
                 
                 PRICE_DATA['CE_PRICE_DATA']['INITIAL_SELL_CE'] = 0
                 PRICE_DATA['PE_PRICE_DATA']['INITIAL_SELL_PE'] = 0

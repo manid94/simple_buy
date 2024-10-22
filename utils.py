@@ -57,10 +57,10 @@ def place_market_exit(api, tsym, type, lots):
 
 
 # Function to check if the order status is complete
-def is_order_complete(order_id, ORDER_STATUS, logger):
+def is_order_complete(order_id, ORDER_STATUS, log, logger):
     # Check if the order exists in the ORDER_STATUS dictionary
     # print(f'throttle wait_for_orders_to_complete 3.1 {order_id}: {ORDER_STATUS} : {logger}')
-    logger.check_update_thread(ORDER_STATUS)
+    log.check_update_thread(logger, ORDER_STATUS)
     if order_id in ORDER_STATUS:
         return ORDER_STATUS[order_id].get('status').lower() == 'complete'
     return False
@@ -75,8 +75,7 @@ def is_order_cancelled(order_id, ORDER_STATUS):
 
 
 
-def wait_for_orders_to_complete(order_ids, api_websocket, max_retries=100, sleep_interval=0.25):
-    global logger
+def wait_for_orders_to_complete(order_ids, api_websocket, logger_entry, logger, max_retries=100, sleep_interval=0.25):
     attempts = 0
     update_log = {}
     # Ensure order_ids is always treated as a list
@@ -100,7 +99,7 @@ def wait_for_orders_to_complete(order_ids, api_websocket, max_retries=100, sleep
             #print('throttle wait_for_orders_to_complete 4')
             if not completed_orders[order_id]:
                 # Check the order status only if it's not already completed
-                completed_orders[order_id] = is_order_complete(order_id, ORDER_STATUS, update_log[order_id])
+                completed_orders[order_id] = is_order_complete(order_id, ORDER_STATUS, update_log[order_id], logger)
         
         
         if all(completed_orders.values()):

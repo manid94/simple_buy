@@ -113,7 +113,7 @@ class ThrottlingLogger:
         initialize_threading = threading.Thread(target=self.check_update_thread, args=(ORDER_STATUS,))
         initialize_threading.start()  # Start the thread
 
-    def check_update_thread(self, ORDER_STATUS):
+    def check_update_thread(self, logger, ORDER_STATUS):
         with self.lock:  # Ensure thread safety when accessing shared data
             # If the order ID hasn't been logged yet, initialize it
             if self.orderno not in self.previousLogger:
@@ -132,6 +132,7 @@ class ThrottlingLogger:
                 # If there's a difference, log the new status and update the previous logger
                 message = ORDER_STATUS[self.orderno]
                 self.logger(
+                    logger,
                     message.get('tsym', 0),
                     self.orderno,
                     message.get('trantype', 'U'),
@@ -151,9 +152,9 @@ def generate_and_update_file(data, logger_class):
     logger_class.append_log(new_entry)
     return True
 
-def logger_entry(tsymbol, orderno, direction, order_type='u', qty=0, ordered_price=0, order_method='UnKn', fillqty='none', avg_price='0', status='placed'):
+def logger_entry(logger,tsymbol, orderno, direction, order_type='u', qty=0, ordered_price=0, order_method='UnKn', fillqty='none', avg_price='0', status='placed'):
     # Using a dictionary for clear and structured data logging
-    # print(f'logger_entry {order_type}')
+    print(f'logger_entry {order_type}')
     datas = {
         "symbol": tsymbol,
         "order_number": orderno,
@@ -168,5 +169,5 @@ def logger_entry(tsymbol, orderno, direction, order_type='u', qty=0, ordered_pri
     }
     loggerThread = MyThread(target=generate_and_update_file, args=(datas, logger))
     loggerThread.start()
-    # print(f'logger_end {order_type}')    
+    print(f'logger_end {order_type}')    
     return True
