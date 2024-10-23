@@ -5,6 +5,7 @@ import os
 import threading
 import copy
 from deepdiff import DeepDiff
+from custom_threading import MyThread
 
 
 class LocalJsonLogger:
@@ -31,19 +32,19 @@ class LocalJsonLogger:
         if not os.path.exists(self.log_file_name):
             with open(self.log_file_name, 'w') as file:
                 json.dump([], file, indent=4)
-            print(f"New log file '{self.log_file_name}' created.")
-        else:
-            print(f"Log file '{self.log_file_name}' already exists. Appending to it.")
+            #print(f"New log file '{self.log_file_name}' created.")
+       # else:
+            #print(f"Log file '{self.log_file_name}' already exists. Appending to it.")
 
     def append_log(self, new_entry):
         """Append new log entry and update the file locally."""
         # Add new entry to local log data
         self.log_data.append(new_entry)
-        
+        # print('apended new entry')
         # Update the log file locally
         with open(self.log_file_name, 'w') as file:
             json.dump(self.log_data, file, indent=4)
-        print(f"Appended new entry to '{self.log_file_name}'.")
+        # print(f"Appended new entry to '{self.log_file_name}'.")
                       
     def generate_log_entry(self, datas):
         # Extracting individual values from the datas dictionary
@@ -58,7 +59,7 @@ class LocalJsonLogger:
         avg_price = datas.get("average_price")
         status = datas.get("status")
     
-        print(f'inside generate_log_entry {datas}')
+        # print(f'inside generate_log_entry {datas}')
         """Generate a new log entry with random data (simulating a trading strategy)."""
         return {
             "time": str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
@@ -112,7 +113,7 @@ class ThrottlingLogger:
         initialize_threading = threading.Thread(target=self.check_update_thread, args=(ORDER_STATUS,))
         initialize_threading.start()  # Start the thread
 
-    def check_update_thread(self, ORDER_STATUS):
+    def check_update_thread(self, logger, ORDER_STATUS):
         with self.lock:  # Ensure thread safety when accessing shared data
             # If the order ID hasn't been logged yet, initialize it
             if self.orderno not in self.previousLogger:
@@ -120,16 +121,20 @@ class ThrottlingLogger:
 
             # Perform deep comparison to see if there are any differences
             diff = DeepDiff(self.previousLogger[self.orderno], ORDER_STATUS.get(self.orderno, {}))
-            
+            #print(f' diff new entry {diff}')
             if not diff:
                 # Update the previous logger with a deep copy of the current state
                 self.previousLogger[self.orderno] = copy.deepcopy(ORDER_STATUS[self.orderno])
             else:
+                
+                # Update the previous logger with a deep copy of the current state
+                self.previousLogger[self.orderno] = copy.deepcopy(ORDER_STATUS[self.orderno])
                 # If there's a difference, log the new status and update the previous logger
                 message = ORDER_STATUS[self.orderno]
                 self.logger(
+                    logger,
                     message.get('tsym', 0),
-                    message.get('norenordno'),
+                    self.orderno,
                     message.get('trantype', 'U'),
                     message.get('remarks', 'exit'),
                     message.get('qty', 0),
@@ -137,11 +142,8 @@ class ThrottlingLogger:
                     message.get('prctyp', 'LMT'),
                     message.get('flqty', 0),
                     message.get('avgprc', 0),
-                    message.get('status', 'S')
+                    message.get('status', 'update')
                 )
-
-
-
 
 
 def generate_and_update_file(data, logger_class):
@@ -150,3 +152,22 @@ def generate_and_update_file(data, logger_class):
     logger_class.append_log(new_entry)
     return True
 
+def logger_entry(logger,tsymbol, orderno, direction, order_type='u', qty=0, ordered_price=0, order_method='UnKn', fillqty='none', avg_price='0', status='placed'):
+    # Using a dictionary for clear and structured data logging
+    print(f'logger_entry {order_type}')
+    datas = {
+        "symbol": tsymbol,
+        "order_number": orderno,
+        "direction": direction,
+        "order_type": order_type,
+        "quantity": qty,
+        "ordered_price": ordered_price,
+        "order_method": order_method,
+        "filled_quantity": fillqty,
+        "average_price": avg_price,
+        "status": status
+    }
+    loggerThread = MyThread(target=generate_and_update_file, args=(datas, logger))
+    loggerThread.start()
+    print(f'logger_end {order_type}')    
+    return True

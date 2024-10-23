@@ -1,5 +1,8 @@
 import pandas as pd
+import copy
 import time
+
+GLOBAL_ORDER_STATUS = {}
 
 class OpenWebSocket:
     def __init__(self, api):
@@ -8,37 +11,43 @@ class OpenWebSocket:
         self.ORDER_STATUS = []
         self.api = api
         self.socket_opened = False
+        #self.event_handler_order_update = order_updates
         searchData = api.searchscrip(exchange='NFO', searchtext='SBI')
         if 'stat' in searchData:
             self.open_socket()
         
     #application callbacks
-    def event_handler_order_update(self,message):
+    def event_handler_order_update(self, message):
+        global GLOBAL_ORDER_STATUS
         # self.ORDER_STATUS
-        # print('print("order event: " + str(message))')
+        #print('print("order event: " + str(message))')
+        # print("order event: " + str(message['norenordno']))
         # order event: {
         #       't': 'om', 'norenordno': '24101600226847', 'uid': 'FT053455', 'actid': 'FT053455', 'exch': 'NFO', 'tsym': 'BANKNIFTY16OCT24P50500',
         #        'trantype': 'B', 'qty': '30', 'prc': '5.25', 'pcode': 'I', 'remarks': 'my_order_002', 'rejreason': ' ', 'status': 'COMPLETE',
         #        'reporttype': 'Fill', 'flqty': '30', 'flprc': '2.85', 'flid': '380225664', 'fltm': '16-10-2024 11:15:20', 'prctyp': 'LMT',
         #         'ret': 'DAY', 'exchordid': '1500000079566637', 'fillshares': '30', 'dscqty': '0', 'avgprc': '2.85', 'exch_tm': '16-10-2024 11:15:20'
         # }
-        # print("order event: " + str(message))
+        #print("order event: " + str(message))
         
         if 'norenordno' in message:
-            self.ORDER_STATUS[message['norenordno']] = {}
-            self.ORDER_STATUS[message['norenordno']]['status'] = message['status']
-            self.ORDER_STATUS[message['norenordno']]['flqty'] =  message.get('flqty', 0)
-            self.ORDER_STATUS[message['norenordno']]['qty'] =  message.get('qty', 0)
-            self.ORDER_STATUS[message['norenordno']]['tsym'] =  message.get('tsym', 0)
-            self.ORDER_STATUS[message['norenordno']]['trantype'] =  message.get('trantype', 'S')
-            self.ORDER_STATUS[message['norenordno']]['option_type'] =  message.get('remarks', 'exit')
+            GLOBAL_ORDER_STATUS[message['norenordno']] = {}
+            GLOBAL_ORDER_STATUS[message['norenordno']]['status'] = message['status']
+            GLOBAL_ORDER_STATUS[message['norenordno']]['flqty'] =  message.get('flqty', 0)
+            GLOBAL_ORDER_STATUS[message['norenordno']]['qty'] =  message.get('qty', 0)
+            GLOBAL_ORDER_STATUS[message['norenordno']]['tsym'] =  message.get('tsym', 0)
+            GLOBAL_ORDER_STATUS[message['norenordno']]['prc'] =  message.get('prc', 0)
+            GLOBAL_ORDER_STATUS[message['norenordno']]['prctyp'] =  message.get('prctyp', 0)
+            GLOBAL_ORDER_STATUS[message['norenordno']]['trantype'] =  message.get('trantype', 'S')
+            GLOBAL_ORDER_STATUS[message['norenordno']]['option_type'] =  message.get('remarks', 'exit')
+            GLOBAL_ORDER_STATUS[message['norenordno']]['remarks'] =  message.get('remarks', 'exit')
 
             # print('norenordno')
             # print(message['status'].lower())
             if message['status'].lower() == 'complete':
-                self.ORDER_STATUS[message['norenordno']]['avgprc'] =  message.get('avgprc', 0)
+                GLOBAL_ORDER_STATUS[message['norenordno']]['avgprc'] =  message.get('avgprc', 0)
             # logger_entry(message.get('tsym', 0),message['norenordno'],message.get('trantype', 'U'),message.get('remarks', 'exit'),message.get('qty', 0),message.get('prc', 0),message.get('prctyp', 'LMT'),  message.get('flqty', 0),message.get('avgprc', 0),  message.get('status', 'S'))
-            
+                    
 
     
 
@@ -108,3 +117,11 @@ class OpenWebSocket:
         
         # Return the last trade price as a float
         return float(temp_data)
+    
+    def get_latest_data(self):
+        return GLOBAL_ORDER_STATUS
+    
+    def is_socket_opened(self):
+        if self.socket_opened:
+            return True
+        return False
