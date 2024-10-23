@@ -15,3 +15,8 @@ Detach from the screen session (this keeps the session and the script running in
 Reattach to the screen session (if you want to see your script's progress later):
 
     screen -r mysession
+
+
+
+
+improvements if cancel order success then only place market order
