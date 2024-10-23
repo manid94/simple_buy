@@ -120,3 +120,8 @@ class OpenWebSocket:
     
     def get_latest_data(self):
         return GLOBAL_ORDER_STATUS
+    
+    def is_socket_opened(self):
+        if self.socket_opened:
+            return True
+        return False
