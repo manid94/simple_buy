@@ -14,7 +14,7 @@ from custom_threading import MyThread
 
 
 
-logging.basicConfig(filename='strategy.log', level=logging.DEBUG)
+logging.basicConfig(filename='strategy.log', level=logging.INFO)
 # flag to tell us if the api_websocket is open
 
 
@@ -24,18 +24,18 @@ BUY_BACK_STATIC = True
 INITIAL_LOTS = 1  # Start with 1 lot
 STRIKE_DIFFERENCE = 500
 ONE_LOT_QUANTITY = 15  # Number of units per lot in Bank Nifty
-TARGET_PROFIT = 500
-MAX_LOSS = 1000
-MAX_LOSS_PER_LEG = 1200
-SAFETY_STOP_LOSS_PERCENTAGE = 0.98
-BUY_BACK_PERCENTAGE = 0.975
-SELL_TARGET_PERCENTAGE = 0.01
-BUY_BACK_LOSS_PERCENTAGE = 0.93
+TARGET_PROFIT = 300
+MAX_LOSS = 500
+MAX_LOSS_PER_LEG = 200
+SAFETY_STOP_LOSS_PERCENTAGE = 0.825
+BUY_BACK_PERCENTAGE = 0.82
+SELL_TARGET_PERCENTAGE = 0.025
+BUY_BACK_LOSS_PERCENTAGE = 0.98
 AVAILABLE_MARGIN = 2000
 ENTRY_TIME = {
-    'hours': 9,
+    'hours': 10,
     'minutes': 43,
-    'seconds': 0
+    'seconds': 30
 }
 EXIT_TIME = {
     'hours': 19,
@@ -45,7 +45,7 @@ EXIT_TIME = {
 }
 
 # DYNAMIC CONFIG
-BUY_BACK_LOTS = 2
+BUY_BACK_LOTS = 1
 
 
 
@@ -73,6 +73,7 @@ PRICE_DATA = {
     }
 }
 CURRENT_STRATEGY_ORDERS = []
+subscribedTokens = []
 
 
 
@@ -123,7 +124,9 @@ def fetch_atm_strike():
     LEG_TOKEN['CE'] = ce_option['token']
     LEG_TOKEN['PE_tsym'] = pe_option['tsym']
     LEG_TOKEN['CE_tsym'] = ce_option['tsym']
-    api.subscribe([subscribeDataPE,subscribeDataCE])
+    if subscribeDataPE not in subscribedTokens:
+        api.subscribe([subscribeDataPE,subscribeDataCE])
+    subscribedTokens.append(subscribeDataPE)
     return atm_strike  # Round to nearest 100
 
 
@@ -157,7 +160,7 @@ def calculate_leg_pnl(option_type, type, lots, api_websocket):
         last_traded_price = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)
         if node_sell in PRICE_DATAS:
             # Use the stored price or fetch the last traded price if it's zero
-            sold_price_or_ltp_price = int(PRICE_DATAS[node_sell])
+            sold_price_or_ltp_price = float(PRICE_DATAS[node_sell])
             if sold_price_or_ltp_price == 0:
                 sold_price_or_ltp_price = last_traded_price
         else:
@@ -173,7 +176,7 @@ def calculate_leg_pnl(option_type, type, lots, api_websocket):
         difference = float(sold_price_or_ltp_price) - float(bought_price_or_ltp_price)
         
         pnl = difference * lots * ONE_LOT_QUANTITY
-        return pnl
+        return float(pnl)
     except Exception as e:
         exit_strategy(api_websocket, {})
         print(f"Error while calculate_leg_pnl: {e}")
@@ -223,6 +226,10 @@ def check_for_stop_loss(option_type, stop_event, selldetails, buydetails, api_we
                         raise ValueError('Error in cancel Order')
                 sell_target_order_id = place_market_order(api, LEG_TOKEN, option_type, 'S', unsold_lots, 'end')
                 print(f'INSIDE sell_order_id :{sell_target_order_id}')
+                while not (sell_target_order_id in ORDER_STATUS and ORDER_STATUS[sell_target_order_id].get('tsym')):
+                    # Optionally perform some action or add a delay to avoid busy waiting
+                    print("Waiting for buy_back_order_id and 'tsym' data...")
+                    time.sleep(0.25)
                 print(f'ORDER_STATUS[sell_target_order_id]: {ORDER_STATUS[sell_target_order_id]}')
                 break
             time.sleep(1)
@@ -243,6 +250,10 @@ def sell_at_limit_price(option_type,api_websocket, buydetails):
         print(f"{option_type} ThrottlingLogger... 2")
         print(f"{option_type} ThrottlingLogger... 2.1")
         sell_target_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'S', buy_back_lots, limit_price=sell_target_price, leg_type='end')
+        while not (sell_target_order_id in ORDER_STATUS and ORDER_STATUS[sell_target_order_id].get('tsym')):
+            # Optionally perform some action or add a delay to avoid busy waiting
+            print("Waiting for buy_back_order_id and 'tsym' data...")
+            time.sleep(0.25)
         print(f"{option_type} ThrottlingLogger... 2.2 {sell_target_order_id}")
         logger_entry(strategy_log_class, ORDER_STATUS[sell_target_order_id]['tsym'],sell_target_order_id,'S',option_type,buy_back_lots,sell_target_price, 'LMT', 0, 0, 'placed')
         print(f'OUTSIDE sell_target_order_id {sell_target_order_id}')
@@ -270,8 +281,11 @@ def buy_at_limit_price(option_type, sell_price, api_websocket):
         buy_back_price = round_to_nearest_0_05(float(sell_price) * float(BUY_BACK_PERCENTAGE))
         print(f"{option_type} reached round_to_nearest_0_05...")
         buy_back_order_id = place_limit_order(api, LEG_TOKEN, option_type, 'B', buy_back_lots, limit_price=buy_back_price, leg_type='start')
-
-        logger_entry(strategy_log_class, ORDER_STATUS[buy_back_order_id]['tsym'],buy_back_order_id,'B',option_type,buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
+        while not (buy_back_order_id in ORDER_STATUS and ORDER_STATUS[buy_back_order_id].get('tsym')):
+            # Optionally perform some action or add a delay to avoid busy waiting
+            print("Waiting for buy_back_order_id and 'tsym' data...")
+            time.sleep(0.25)
+        logger_entry(strategy_log_class, ORDER_STATUS[buy_back_order_id]['tsym'] ,buy_back_order_id,'B',option_type,buy_back_lots,buy_back_price, 'LMT', 0, 0, 'placed')
         CURRENT_STRATEGY_ORDERS.append(buy_back_order_id)
         print(f"{option_type} ThrottlingLogger...0")
         log_buy = ThrottlingLogger(buy_back_order_id, logger_entry)
@@ -468,6 +482,7 @@ def exit_strategy(api_websocket, stop_event):
                 wait_for_orders_to_complete(order_id, api_websocket, logger_entry, 100)
         # Implement logic to close all open orders and exit strategy
         print("Strategy exited.")
+        logging.info(f'pnl {calculate_total_pnl(api_websocket)}')
         if stop_event:
             stop_event.set()
         return True
@@ -552,7 +567,7 @@ def run_strategy(stop_event, api_websocket):
 
         else:
             print("Outside trading hours, strategy paused.")
-            time.sleep(1)
+            time.sleep(10)
             
         
     return True
