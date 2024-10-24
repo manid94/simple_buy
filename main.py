@@ -10,8 +10,8 @@ ist_datatime = datetime.now(ist)
 
 
 TOKENGENERATION_TIME = {
-    'hours': 9,
-    'minutes': 43,
+    'hours': 10,
+    'minutes': 42,
     'seconds': 0
 }
 
@@ -58,7 +58,7 @@ def main():
             time.sleep(60 * 60 * 10)  # Sleep for 10 hours before re-checking
             entry_happened_today = False
             stop_event.clear()  # Clear the stop event flag
-        time.sleep(180) 
+        time.sleep(20) 
     return True
 
 main()
