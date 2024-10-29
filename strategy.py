@@ -483,11 +483,13 @@ def exit_strategy(api_websocket, stop_event):
         # Implement logic to close all open orders and exit strategy
         print("Strategy exited.")
         logging.info(f'pnl {calculate_total_pnl(api_websocket)}')
+        api.close_websocket()
         if stop_event:
             stop_event.set()
         return True
     except Exception as e:
         # Catch all other exceptions
+        api.close_websocket()
         print(f"An unexpected error occurred exit_strategy: {e}")
         logging.error('error in exit strategy ')
         return None
@@ -581,8 +583,8 @@ def start_the_strategy(stop_event):
         
         while not api_websocket.is_socket_opened():
             time.sleep(0.1)
-        
         run_strategy(stop_event, api_websocket)
+        api.close_websocket()
         return True
     except TypeError as e:
         logging.error(f"Type error occurred: {e}")
