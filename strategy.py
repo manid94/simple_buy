@@ -14,7 +14,7 @@ from custom_threading import MyThread
 
 
 
-logging.basicConfig(filename='strategy.log', level=logging.INFO)
+logging.basicConfig(filename=f'strategy__{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log', level=logging.INFO)
 # flag to tell us if the api_websocket is open
 
 
@@ -22,12 +22,12 @@ logging.basicConfig(filename='strategy.log', level=logging.INFO)
 SYMBOL = 'Nifty bank'
 BUY_BACK_STATIC = True
 INITIAL_LOTS = 1  # Start with 1 lot
-STRIKE_DIFFERENCE = 400
+STRIKE_DIFFERENCE = 300
 ONE_LOT_QUANTITY = 15  # Number of units per lot in Bank Nifty
 TARGET_PROFIT = 500
 MAX_LOSS = 300
 MAX_LOSS_PER_LEG = 200
-SAFETY_STOP_LOSS_PERCENTAGE = 0.825
+SAFETY_STOP_LOSS_PERCENTAGE = 0.83
 BUY_BACK_PERCENTAGE = 0.82
 SELL_TARGET_PERCENTAGE = 0.025
 BUY_BACK_LOSS_PERCENTAGE = 0.90
