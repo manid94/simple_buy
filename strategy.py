@@ -582,7 +582,7 @@ def start_the_strategy(stop_event):
     try:
         api = getshoonyatradeapi()
         api_websocket = OpenWebSocket(api)
-        logging.info(f'Starting WebSocket data connection...{datetime.now(ist).strftime("%Y%m%d_%H%M%S")}')
+        logging.info(f'Starting WebSocket data connection...{datetime.now(ist).strftime("%Y %m %d - %H /%M/ %S")}')
         
         while not api_websocket.is_socket_opened():
             time.sleep(0.1)
