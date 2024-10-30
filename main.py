@@ -10,7 +10,7 @@ ist_datatime = datetime.now(ist)
 
 
 TOKENGENERATION_TIME = {
-    'hours': 10,
+    'hours': 8,
     'minutes': 42,
     'seconds': 0
 }

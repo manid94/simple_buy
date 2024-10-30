@@ -22,23 +22,23 @@ logging.basicConfig(filename='strategy.log', level=logging.INFO)
 SYMBOL = 'Nifty bank'
 BUY_BACK_STATIC = True
 INITIAL_LOTS = 1  # Start with 1 lot
-STRIKE_DIFFERENCE = 500
+STRIKE_DIFFERENCE = 400
 ONE_LOT_QUANTITY = 15  # Number of units per lot in Bank Nifty
-TARGET_PROFIT = 300
-MAX_LOSS = 500
+TARGET_PROFIT = 500
+MAX_LOSS = 300
 MAX_LOSS_PER_LEG = 200
 SAFETY_STOP_LOSS_PERCENTAGE = 0.825
 BUY_BACK_PERCENTAGE = 0.82
 SELL_TARGET_PERCENTAGE = 0.025
-BUY_BACK_LOSS_PERCENTAGE = 0.98
+BUY_BACK_LOSS_PERCENTAGE = 0.90
 AVAILABLE_MARGIN = 2000
 ENTRY_TIME = {
-    'hours': 10,
-    'minutes': 43,
-    'seconds': 30
+    'hours': 9,
+    'minutes': 33,
+    'seconds': 0
 }
 EXIT_TIME = {
-    'hours': 19,
+    'hours': 14,
     'minutes': 50,
     'seconds': 0
 
@@ -412,8 +412,10 @@ def exit_strategy(api_websocket, stop_event):
         global strategy_running, exited_strategy
         ORDER_STATUS = api_websocket.get_latest_data() 
         strategy_running = True  # Stop the strategy
+        if exit_strategy:
+            raise ValueError('Error in exit strategy already exited')
         exited_strategy = True
-        print('Exiting strategy...')
+        print('Exiting strategy...', datetime.now(ist).strftime("%Y%m%d_%H%M%S"))
         print('Current ORDER_STATUS:', ORDER_STATUS)
 
         # Initialize totals and symbol tracking for CE and PE
@@ -568,8 +570,9 @@ def run_strategy(stop_event, api_websocket):
 
 
         else:
+            time_to_sleep = start_time - current_time
             print("Outside trading hours, strategy paused.")
-            time.sleep(10)
+            time.sleep(time_to_sleep)
             
         
     return True
