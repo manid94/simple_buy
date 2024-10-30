@@ -413,7 +413,7 @@ def exit_strategy(api_websocket, stop_event):
         ORDER_STATUS = api_websocket.get_latest_data() 
         strategy_running = True  # Stop the strategy
         if exit_strategy:
-            raise ValueError('Error in exit strategy already exited')
+            raise ValueError(f'Error in exit strategy already exited {datetime.now(ist).strftime("%Y%m%d_%H%M%S")}')
         exited_strategy = True
         print('Exiting strategy...', datetime.now(ist).strftime("%Y%m%d_%H%M%S"))
         print('Current ORDER_STATUS:', ORDER_STATUS)
@@ -582,7 +582,7 @@ def start_the_strategy(stop_event):
     try:
         api = getshoonyatradeapi()
         api_websocket = OpenWebSocket(api)
-        logging.info('Starting WebSocket data connection...')
+        logging.info(f'Starting WebSocket data connection...{datetime.now(ist).strftime("%Y%m%d_%H%M%S")}')
         
         while not api_websocket.is_socket_opened():
             time.sleep(0.1)
