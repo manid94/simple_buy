@@ -14,7 +14,7 @@ from custom_threading import MyThread
 
 
 
-logging.basicConfig(filename=f'strategy__{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log', level=logging.INFO)
+logging.basicConfig(filename=f'strategy__{datetime.now(ist).strftime("%Y%m%d_%H%M%S")}.log', level=logging.INFO)
 # flag to tell us if the api_websocket is open
 
 
