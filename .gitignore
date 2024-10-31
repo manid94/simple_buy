@@ -1,6 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 logger_files/
+strategy_log_files/
 *.py[cod]
 *$py.class
 

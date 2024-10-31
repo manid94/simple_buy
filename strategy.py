@@ -14,7 +14,7 @@ from custom_threading import MyThread
 
 
 
-logging.basicConfig(filename=f'strategy__{datetime.now(ist).strftime("%Y%m%d_%H%M%S")}.log', level=logging.INFO)
+logging.basicConfig(filename=f'strategy_log_files/strategy__{datetime.now(ist).strftime("%Y_%m%d_%H %M %S")}.log', level=logging.INFO)
 # flag to tell us if the api_websocket is open
 
 
@@ -185,7 +185,7 @@ def calculate_leg_pnl(option_type, type, lots, api_websocket):
 
     
 # Function to calculate total PNL
-def calculate_total_pnl(api_websocket):
+def calculate_total_pnl(api_websocket, log=False):
     try:
         ce_entry_pnl = calculate_leg_pnl('CE', 'INITIAL', INITIAL_LOTS, api_websocket)
         pe_entry_pnl = calculate_leg_pnl('PE', 'INITIAL', INITIAL_LOTS, api_websocket)
@@ -194,9 +194,11 @@ def calculate_total_pnl(api_websocket):
         ce_re_entry_pnl = calculate_leg_pnl('CE', 'RE_ENTRY', INITIAL_LOTS, api_websocket)
         pe_re_entry_pnl = calculate_leg_pnl('PE', 'RE_ENTRY', INITIAL_LOTS, api_websocket)  # Corrected to 'PE'
         pnl = ce_pnl + pe_pnl + ce_entry_pnl + pe_entry_pnl + ce_re_entry_pnl + pe_re_entry_pnl
-        logging.info(f'pnl ce_pnl {ce_pnl} + pe_pnl {pe_pnl} + ce_entry_pnl {ce_entry_pnl} + pe_entry_pnl {pe_entry_pnl} + ce_re_entry_pnl {ce_re_entry_pnl} + pe_re_entry_pnl{pe_re_entry_pnl}')
+        if log:
+            logging.info(f'pnl ce_pnl {ce_pnl} + pe_pnl {pe_pnl} + ce_entry_pnl {ce_entry_pnl} + pe_entry_pnl {pe_entry_pnl} + ce_re_entry_pnl {ce_re_entry_pnl} + pe_re_entry_pnl{pe_re_entry_pnl}')
         return pnl
     except Exception as e:
+        logging.info('error in calculate_total_pnl')
         exit_strategy(api_websocket, {})
         print(f"Error while calculate_total_pnl: {e}")
 
@@ -502,7 +504,7 @@ def exit_strategy(api_websocket, stop_event):
                 wait_for_orders_to_complete(order_id, api_websocket, logger_entry, 100)
         # Implement logic to close all open orders and exit strategy
         print("Strategy exited.")
-        logging.info(f'pnl {calculate_total_pnl(api_websocket)}')
+        logging.info(f'pnl {calculate_total_pnl(api_websocket, True)}')
         api.close_websocket()
         if stop_event:
             stop_event.set()
