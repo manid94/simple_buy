@@ -20,3 +20,6 @@ Reattach to the screen session (if you want to see your script's progress later)
 
 
 improvements if cancel order success then only place market order
+
+
+move print and logging in utils function

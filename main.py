@@ -49,7 +49,8 @@ def main():
             print("Stopping strategy thread.")
             stop_event.set()  # Signal the thread to stop
             try:
-                thread.join()
+                if thread.join:
+                    thread.join()
             except Exception as e:
                 print(f"Error while starting the strategy: {e}")
             print("Strategy has stopped for today.")
