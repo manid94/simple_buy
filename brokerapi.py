@@ -1,5 +1,5 @@
 import json
-import datetime
+from datetime import datetime
 import pyotp
 from google.cloud import storage
 from NorenRestApiPy.NorenApi import NorenApi

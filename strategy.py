@@ -5,7 +5,7 @@ import hashlib
 import logging
 from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots
 from brokerapi import getshoonyatradeapi
-from datetime import date, datetime
+from datetime import datetime
 from logger import LocalJsonLogger, ThrottlingLogger, logger_entry
 from api_websocket import OpenWebSocket
 from custom_threading import MyThread
@@ -16,7 +16,7 @@ from custom_threading import MyThread
 
 logging.basicConfig(filename=f'strategy_log_files/strategy__{datetime.now(ist).strftime("%Y_%m%d_%H %M %S")}.log', level=logging.INFO)
 
-def trace_execution(str= 'no data', data={datetime.now(ist).strftime("%Y %m %d - %H /%M/ %S")}):
+def trace_execution(str= 'no data', data=datetime.now(ist).strftime("%Y %m %d - %H /%M/ %S")):
     print(f'{str} at {data}')
     logging.info(f'{str} at {data}')
 # flag to tell us if the api_websocket is open
@@ -132,6 +132,7 @@ def fetch_atm_strike():
     if subscribeDataPE not in subscribedTokens:
         api.subscribe([subscribeDataPE,subscribeDataCE])
     subscribedTokens.append(subscribeDataPE)
+    trace_execution('completed in fetch_atm_strike')
     return atm_strike  # Round to nearest 100
 
 
@@ -522,7 +523,6 @@ def run_strategy(stop_event, api_websocket):
     end_time = ist_datatime.replace(hour=EXIT_TIME['hours'], minute=EXIT_TIME['minutes'], second=EXIT_TIME['seconds'], microsecond=0).time()
     lots = INITIAL_LOTS * ONE_LOT_QUANTITY
     print('entered run_strategy')
-    atm_strike = fetch_atm_strike()
     while not strategy_running:
         current_time = datetime.now(ist).time()
         if current_time >= end_time:
