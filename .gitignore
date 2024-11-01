@@ -1,6 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
-logger_files/
+logger_files/*.json
 *.py[cod]
 *$py.class
 

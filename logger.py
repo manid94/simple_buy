@@ -1,16 +1,18 @@
 import json
-import datetime
+import pytz
 import random
 import os
 import threading
 import copy
+from datetime import datetime
 from deepdiff import DeepDiff
 from custom_threading import MyThread
 
+ist = pytz.timezone('Asia/Kolkata')
 
 class LocalJsonLogger:
     def __init__(self):
-        self.log_file_name = f'logger_files/trading_log_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+        self.log_file_name = f'logger_files/trading_log_{datetime.now(ist).strftime("%Y%m%d_%H%M%S")}.json'
         self.log_data = []
 
         # Ensure the directory exists
@@ -62,7 +64,7 @@ class LocalJsonLogger:
         # print(f'inside generate_log_entry {datas}')
         """Generate a new log entry with random data (simulating a trading strategy)."""
         return {
-            "time": str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            "time": str(datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")),
             "tsymbol": str(tsymbol),
             "orderno": str(orderno),
             "direction": str(direction),
@@ -76,7 +78,7 @@ class LocalJsonLogger:
             "status": str(status)   
         }
         return {
-            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "time": datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S"),
             "tsymbol": f"BANKNIFTY23OCT24C{random.randint(50000, 60000)}",
             "orderno": f"{random.randint(10000000000000, 99999999999999)}",
             "type": random.choice(["B", "S"]),
@@ -90,7 +92,7 @@ class LocalJsonLogger:
 
 # if __name__ == "__main__":
 #     # Configuration
-#     log_file_name = f"logger_files/trading_log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+#     log_file_name = f"logger_files/trading_log_{datetime.now(ist).strftime('%Y%m%d_%H%M%S')}.json"
 
 #     # Initialize the local JSON logger
 #     logger = LocalJsonLogger(log_file_name)

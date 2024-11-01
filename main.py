@@ -10,14 +10,14 @@ ist_datatime = datetime.now(ist)
 
 
 TOKENGENERATION_TIME = {
-    'hours': 10,
+    'hours': 8,
     'minutes': 42,
     'seconds': 0
 }
 
 STRATEGY_CLOSE_TIME = {
-    'hours': 16,
-    'minutes': 0,
+    'hours': 15,
+    'minutes': 22,
     'seconds': 0
 }
 
@@ -49,7 +49,8 @@ def main():
             print("Stopping strategy thread.")
             stop_event.set()  # Signal the thread to stop
             try:
-                thread.join()
+                if thread.join:
+                    thread.join()
             except Exception as e:
                 print(f"Error while starting the strategy: {e}")
             print("Strategy has stopped for today.")

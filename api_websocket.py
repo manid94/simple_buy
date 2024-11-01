@@ -106,7 +106,7 @@ class OpenWebSocket:
         
         # Check if the leg_token exists in SYMBOLDICT
         if leg_token not in self.SYMBOLDICT:
-            raise KeyError(f"Token {leg_token} not found in SYMBOLDICT")
+            raise KeyError(f"Token {leg_token} not found in SYMBOLDICT {self.SYMBOLDICT}")
         
         # Fetch the last trade price
         temp_data = self.SYMBOLDICT[leg_token].get('lp', None)
