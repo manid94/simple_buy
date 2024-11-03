@@ -1,7 +1,6 @@
 import time
 import logging
 from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots
-from brokerapi import getshoonyatradeapi
 from datetime import datetime
 from logger import LocalJsonLogger, ThrottlingLogger, logger_entry
 from custom_threading import MyThread
