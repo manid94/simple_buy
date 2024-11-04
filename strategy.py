@@ -9,6 +9,7 @@ from datetime import datetime
 from logger import LocalJsonLogger, ThrottlingLogger, logger_entry
 from api_websocket import OpenWebSocket
 from custom_threading import MyThread
+from seperate_strategy import NewStrategy
 
 
 
@@ -31,9 +32,9 @@ ONE_LOT_QUANTITY = 15  # Number of units per lot in Bank Nifty
 TARGET_PROFIT = 500
 MAX_LOSS = 300
 MAX_LOSS_PER_LEG = 200
-SAFETY_STOP_LOSS_PERCENTAGE = 0.83
-BUY_BACK_PERCENTAGE = 0.82
-SELL_TARGET_PERCENTAGE = 0.025
+SAFETY_STOP_LOSS_PERCENTAGE = 0.985 #0.83
+BUY_BACK_PERCENTAGE = 0.98 #0.82
+SELL_TARGET_PERCENTAGE = 0.01 # 0.025
 BUY_BACK_LOSS_PERCENTAGE = 0.90
 AVAILABLE_MARGIN = 5000
 ENTRY_TIME = {
@@ -84,7 +85,8 @@ subscribedTokens = []
 
 # Global variables
 strategy_running = False
-exited_strategy = False
+exited_strategy_started = False
+exited_strategy_completed = True
 sell_price_ce = 0
 sell_price_pe = 0
 ist_datatime = datetime.now(ist)
@@ -103,39 +105,55 @@ strategy_log_class = {}
 
 
 # Utility function to fetch the ATM strike price
-def fetch_atm_strike():
+def fetch_atm_strike(self):
     global LEG_TOKEN
-    
     trace_execution('entered in fetch_atm_strike')
-    banknifty_price = api.get_quotes(exchange='NSE', token='26009')
-    current_price = banknifty_price['lp']
-    print(float(current_price))
-    atm_strike = round(float(current_price) / 100) * 100
-    print(atm_strike)
+    try:
+        # Fetch the current Bank Nifty price
+        symbol_details = api.get_quotes(exchange='NSE', token='26009')
+        current_price = float(symbol_details['lp'])
+        symbol_name = symbol_details['symname']
+        print(current_price)
 
-    nearest_symbol_ce = (str(atm_strike+STRIKE_DIFFERENCE)+' nifty bANK' + ' ce')
-    nearest_symbol_pe = (str(atm_strike-STRIKE_DIFFERENCE)+' nifty bANK' + ' pe')
+        # Calculate the ATM strike price rounded to the nearest 100
+        atm_strike = round(current_price / 100) * 100
+        print(atm_strike)
 
-    # print(nearest_symbol_ce)
-    # print(api.searchscrip(exchange='NFO', searchtext=nearest_symbol_ce))
-    # print(api.searchscrip(exchange='NFO', searchtext=nearest_symbol_pe))
-    option_chains_ce = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_ce)
-    option_chains_pe = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_pe)
-    pe_option = option_chains_pe['values'][0]
-    ce_option = option_chains_ce['values'][0]
-    subscribeDataPE = 'NFO|'+pe_option['token']
-    subscribeDataCE = 'NFO|'+ce_option['token']
-    LEG_TOKEN['PE'] = pe_option['token']
-    LEG_TOKEN['CE'] = ce_option['token']
-    LEG_TOKEN['PE_tsym'] = pe_option['tsym']
-    LEG_TOKEN['CE_tsym'] = ce_option['tsym']
-    if subscribeDataPE not in subscribedTokens:
-        api.subscribe([subscribeDataPE,subscribeDataCE])
-        subscribedTokens.append(subscribeDataPE)
-        trace_execution(f'{[subscribeDataPE,subscribeDataCE]}')
-    trace_execution('completed in fetch_atm_strike')
-    time.sleep(3) # mandatory
-    return atm_strike  # Round to nearest 100
+        # Generate nearest CE and PE option symbols based on ATM strike and strike difference
+        nearest_symbol_ce = f"{symbol_name} {atm_strike + STRIKE_DIFFERENCE} CE"
+        nearest_symbol_pe = f"{symbol_name} {atm_strike - STRIKE_DIFFERENCE} PE"
+
+        # Fetch option chain details for both CE and PE
+        option_chains_ce = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_ce)
+        option_chains_pe = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_pe)
+
+        ce_option = option_chains_ce['values'][0]
+        pe_option = option_chains_pe['values'][0]
+
+        # Set up token details for both CE and PE
+        LEG_TOKEN = {
+            'PE': pe_option['token'],
+            'CE': ce_option['token'],
+            'PE_tsym': pe_option['tsym'],
+            'CE_tsym': ce_option['tsym']
+        }
+
+        # Subscription for tokens if not already subscribed
+        subscribeDataPE = f"NFO|{pe_option['token']}"
+        subscribeDataCE = f"NFO|{ce_option['token']}"
+        
+        if subscribeDataPE not in subscribedTokens or subscribeDataCE not in subscribedTokens:
+            api.subscribe([subscribeDataPE, subscribeDataCE])
+            subscribedTokens.extend([subscribeDataPE, subscribeDataCE])
+            trace_execution(f'{[subscribeDataPE,subscribeDataCE]}')
+
+        trace_execution('completed in fetch_atm_strike')
+        return atm_strike
+
+    except Exception as e:
+        trace_execution(f'Error in fetch_atm_strike: {e}')
+        return 0
+    
 
 
 # Calculate PNL based on current leg status
@@ -146,7 +164,7 @@ def calculate_leg_pnl(option_type, type, lots, api_websocket):
         price_data_key = option_type + '_PRICE_DATA'
         if price_data_key not in PRICE_DATA:
             trace_execution(f"Error: {price_data_key} not found in PRICE_DATA.")
-            return None
+            raise ValueError('Error on exit')
         
         # Get the PRICE_DATAS for the given option_type
         PRICE_DATAS = PRICE_DATA[price_data_key]
@@ -186,8 +204,11 @@ def calculate_leg_pnl(option_type, type, lots, api_websocket):
         pnl = difference * lots * ONE_LOT_QUANTITY
         return float(pnl)
     except Exception as e:
-        exit_strategy(api_websocket, {})
-        trace_execution(f'Error in calculate_leg_pnl: {e}')
+        if not exited_strategy_completed:
+            exit_strategy(api_websocket, {})
+            trace_execution(f'Error in calculate_leg_pnl: {e}')
+        else:
+            trace_execution(f'calculate_leg_pnl Error but already exited: {e}')
         
 
     
@@ -205,9 +226,11 @@ def calculate_total_pnl(api_websocket, log=False):
             trace_execution(f'pnl ce_pnl {ce_pnl} + pe_pnl {pe_pnl} + ce_entry_pnl {ce_entry_pnl} + pe_entry_pnl {pe_entry_pnl} + ce_re_entry_pnl {ce_re_entry_pnl} + pe_re_entry_pnl{pe_re_entry_pnl}')
         return pnl
     except Exception as e:
-        trace_execution(f'Error in calculate_total_pnl: {e}')
-        exit_strategy(api_websocket, {})
-
+        if not exited_strategy_completed:
+            trace_execution(f'Error in calculate_total_pnl: {e}')
+            exit_strategy(api_websocket, {})
+        else:
+            trace_execution(f'calculate_total_pnl Error but already exited: {e}')
 
 def check_for_stop_loss(option_type, stop_event, selldetails, buydetails, api_websocket):
     global PRICE_DATA
@@ -218,7 +241,7 @@ def check_for_stop_loss(option_type, stop_event, selldetails, buydetails, api_we
         buy_back_order_id = buydetails['buy_back_order_id']
         log_sell = ThrottlingLogger(sell_target_order_id, logger_entry)
         while not is_order_complete(sell_target_order_id, ORDER_STATUS, log_sell ,strategy_log_class): #static instead check weather ltp > selltarget_price
-            if exited_strategy or stop_event.is_set():
+            if exited_strategy_started or stop_event.is_set():
                 break
             ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
             legpnl = calculate_leg_pnl(option_type, 'BUY_BACK', BUY_BACK_LOTS, api_websocket)
@@ -245,8 +268,12 @@ def check_for_stop_loss(option_type, stop_event, selldetails, buydetails, api_we
             time.sleep(1)
         return sell_target_order_id
     except Exception as e:
-        trace_execution(f'Error in check_for_stop_loss: {e}')
-        exit_strategy(api_websocket, stop_event)
+        if not exited_strategy_completed:
+            trace_execution(f'Error in check_for_stop_loss: {e}')
+            exit_strategy(api_websocket, stop_event)
+        else:
+            trace_execution(f'check_for_stop_loss Error but already exited: {e}')
+
     
 
 def sell_at_limit_price(option_type,api_websocket, buydetails):
@@ -278,8 +305,11 @@ def sell_at_limit_price(option_type,api_websocket, buydetails):
             'sell_target_price': sell_target_price
         }
     except Exception as e:
-        trace_execution(f'error in sell_at_limit_price: {e}')
-        exit_strategy(api_websocket, {})
+        if not exited_strategy_completed:
+            trace_execution(f'error in sell_at_limit_price: {e}')
+            exit_strategy(api_websocket, {})
+        else:
+            trace_execution(f'sell_at_limit_price Error but already exited: {e}')
     
     
     
@@ -312,13 +342,16 @@ def buy_at_limit_price(option_type, sell_price, api_websocket):
             'buy_back_order_id' : buy_back_order_id
         }
     except Exception as e:
-        trace_execution(f'Error while buy_at_limit_price: {e}')
-        exit_strategy(api_websocket, {})
+        if not exited_strategy_completed:
+            trace_execution(f'Error while buy_at_limit_price: {e}')
+            exit_strategy(api_websocket, {})
+        else:
+            trace_execution(f'buy_at_limit_price Error but already exited: {e}')
 
 # Monitor individual leg logic (CE/PE)
 def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket):
     try:
-        global strategy_running, PRICE_DATA, exited_strategy, logger_entry
+        global strategy_running, PRICE_DATA, exited_strategy_started, logger_entry
         trace_execution('entered in monitor_leg')
         ORDER_STATUS = api_websocket.get_latest_data()
         # PRICE_DATA[option_type+'_PRICE_DATA']['INITIAL_BUY_'+option_type] = sell_price
@@ -327,7 +360,7 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
         while strategy_running and not leg_entry:
             # print('while check monitor')
             ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
-            if exited_strategy or stop_event.is_set():
+            if exited_strategy_started or stop_event.is_set():
                 break
             if ltp <= (float(sell_price) * float(SAFETY_STOP_LOSS_PERCENTAGE)):
                 leg_entry = True
@@ -336,7 +369,7 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
                 buydetails = buy_at_limit_price(option_type, sell_price, api_websocket)
                 selldetails = sell_at_limit_price(option_type, api_websocket, buydetails)
                 print(f"{option_type} ThrottlingLogger... 4 {selldetails}")
-                if exited_strategy or stop_event.is_set():
+                if exited_strategy_started or stop_event.is_set():
                     break
                 print(f"{option_type} ThrottlingLogger... 5")
                 
@@ -352,22 +385,34 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
                 break
         return True
     except TypeError as e:
-        trace_execution(f'Type error in monitor_leg: {e}')
-        exit_strategy(api_websocket, stop_event)
-        return None
+        if not exited_strategy_completed:
+            trace_execution(f'Type error in monitor_leg: {e}')
+            exit_strategy(api_websocket, stop_event)
+        else:
+            trace_execution(f'monitor_leg Error but already exited: {e}')
+        raise ValueError('Error on exit')
     except ZeroDivisionError as e:
-        trace_execution(f'Math error in monitor_leg: {e}')
-        exit_strategy(api_websocket, stop_event)
-        return None
+        if not exited_strategy_completed:
+            trace_execution(f'Math error in monitor_leg: {e}')
+            exit_strategy(api_websocket, stop_event)
+        else:
+            trace_execution(f'monitor_leg Error but already exited: {e}')
+        raise ValueError('Error on exit')
     except ValueError as e:
-        trace_execution(f'Value error in monitor_leg: {e}')
-        exit_strategy(api_websocket, stop_event)
-        return None
+        if not exited_strategy_completed:
+            trace_execution(f'Value error in monitor_leg: {e}')
+            exit_strategy(api_websocket, stop_event)
+        else:
+            trace_execution(f'monitor_leg Error but already exited: {e}')
+        raise ValueError('Error on exit')
     except Exception as e:
         # Catch all other exceptions
-        trace_execution(f'error in monitor_leg: {e}')
-        exit_strategy(api_websocket, stop_event)
-        return None
+        if not exited_strategy_completed:
+            trace_execution(f'error in monitor_leg: {e}')
+            exit_strategy(api_websocket, stop_event)
+        else:
+            trace_execution(f'monitor_leg Error but already exited: {e}')
+        raise ValueError('Error on exit')
     
 
 
@@ -375,24 +420,24 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
 # Function to monitor the strategy
 def monitor_strategy(stop_event, api_websocket):
     try:
-        global strategy_running, exited_strategy
+        global strategy_running, exited_strategy_started
         print('monitor_strategy ')
         trace_execution('entered in monitor_strategy')
         end_time = ist_datatime.replace(hour=EXIT_TIME['hours'], minute=EXIT_TIME['minutes'], second=EXIT_TIME['seconds'], microsecond=0).time()
         while strategy_running:
-            if exited_strategy or stop_event.is_set():
+            if exited_strategy_started or stop_event.is_set():
                 break
             
             current_time = datetime.now(ist).time()
             if current_time >= end_time:
                 exit_strategy(api_websocket, stop_event)
             pnl = calculate_total_pnl(api_websocket)  # Fetch the PNL
-            if pnl >= TARGET_PROFIT and not exited_strategy:
+            if pnl >= TARGET_PROFIT and not exited_strategy_started:
                 print(f"Target profit of ₹{TARGET_PROFIT} reached. Exiting strategy.")
                 # strategy_running = False
                 exit_strategy(api_websocket, stop_event)
                 break
-            elif pnl <= -MAX_LOSS and not exited_strategy:
+            elif pnl <= -MAX_LOSS and not exited_strategy_started:
                 print(f"Max loss of ₹{MAX_LOSS} reached. Exiting strategy.")
                 # strategy_running = False
                 exit_strategy(api_websocket, stop_event)
@@ -401,43 +446,42 @@ def monitor_strategy(stop_event, api_websocket):
             time.sleep(5)  # Check PNL every 5 seconds
         return True
     except TypeError as e:
-        trace_execution(f'Type error in monitor_strategy: {e}')
-        exit_strategy(api_websocket, stop_event)
-        return None
+        if not exited_strategy_completed:
+            trace_execution(f'Type error in monitor_strategy: {e}')
+            exit_strategy(api_websocket, stop_event)
+        else:
+            trace_execution(f'monitor_strategy Error but already exited: {e}')
+        raise ValueError('Error on exit')
     except ZeroDivisionError as e:
-        trace_execution(f'Math error in monitor_strategy: {e}')
-        exit_strategy(api_websocket, stop_event)
-        return None
+        if not exited_strategy_completed:
+            trace_execution(f'Math error in monitor_strategy: {e}')
+            exit_strategy(api_websocket, stop_event)
+        else:
+            trace_execution(f'monitor_strategy Error but already exited: {e}')
+        raise ValueError('Error on exit')
     except ValueError as e:
-        trace_execution(f'Value error in monitor_strategy: {e}')
-        exit_strategy(api_websocket, stop_event)
-        return None
+        if not exited_strategy_completed:
+            trace_execution(f'Value error in monitor_strategy: {e}')
+            exit_strategy(api_websocket, stop_event)
+        else:
+            trace_execution(f'monitor_strategy Error but already exited: {e}')
+        raise ValueError('Error on exit')
     except Exception as e:
         # Catch all other exceptions
-        trace_execution(f'error in monitor_strategy: {e}')
-        exit_strategy(api_websocket, stop_event)
-        return None
+        if not exited_strategy_completed:
+            trace_execution(f'monitor_strategy error in monitor_strategy: {e}')
+            exit_strategy(api_websocket, stop_event)
+        else:
+            trace_execution(f'monitor_strategy Error but already exited: {e}')
+        raise ValueError('Error on exit')
 
-
-
-
-# Function to exit the strategy
-def exit_strategy(api_websocket, stop_event):
+def check_order_qty(api_websocket):
+    totals = {'CE': 0, 'PE': 0}
+    symbols = {'CE': '', 'PE': ''}
     try:
-        global strategy_running, exited_strategy
-        trace_execution('entered in exit_strategy')
-        ORDER_STATUS = api_websocket.get_latest_data() 
-        strategy_running = True  # Stop the strategy
-        if exited_strategy:
-            raise ValueError(f'Error in exit strategy already exited {datetime.now(ist).strftime("%Y%m%d_%H%M%S")}')
-        exited_strategy = True
-        print('Exiting strategy...', datetime.now(ist).strftime("%Y%m%d_%H%M%S"))
-        print('Current ORDER_STATUS:', ORDER_STATUS)
-
+        trace_execution('entered in check_net_qty')
+        ORDER_STATUS = api_websocket.get_latest_data()
         # Initialize totals and symbol tracking for CE and PE
-        totals = {'CE': 0, 'PE': 0}
-        symbols = {'CE': '', 'PE': ''}
-
             # Filter unique values using set
         unique_orders = set(CURRENT_STRATEGY_ORDERS)
 
@@ -488,29 +532,68 @@ def exit_strategy(api_websocket, stop_event):
                 elif typ == 'B':
                     totals[option_type] += qty
                 symbols[option_type] = tsym
+                
+        trace_execution('completed in check_net_qty')
+        return {
+            'symbols' : symbols,
+            'totals' : totals
+        }
+    except Exception as e:
+        # Catch all other exceptions
+        if not exited_strategy_completed:
+            exit_strategy(api_websocket, {})
+            logging.error(f'An unexpected error occurred check_net_qty: {e}')
+        else:
+            trace_execution(f'check_net_qty Error but already exited: {e}')
+        raise ValueError('Error on check_net_qty')
 
-        print(f"Totals: {totals}, Symbols: {symbols}")
+    
+# Function to exit the strategy
+def exit_strategy(api_websocket, stop_event):
+    try:
+        global strategy_running, exited_strategy_started, exited_strategy_completed
+        trace_execution('entered in exit_strategy')
+        ORDER_STATUS = api_websocket.get_latest_data() 
+        strategy_running = True  # Stop the strategy
+        if exited_strategy_started:
+            raise ValueError(f'Error in exit strategy already exit function called')
+        exited_strategy_started = True
+        trace_execution('Exiting strategy...')
+        trace_execution('Current ORDER_STATUS:', ORDER_STATUS)
+
+        values = check_order_qty(api_websocket)
+        totals = values['totals']
+        symbols = values['symbols']
+        trace_execution(f"Totals: {totals}, Symbols: {symbols}")
         # Place market exit orders for remaining positions
         for option_type, total in totals.items():
             if total != 0:
                 buy_or_sell = 'S' if total > 0 else 'B'
                 tsym = symbols[option_type]
-                print(f"Placing market exit for {option_type}: {buy_or_sell} {abs(total)} lots")
+                trace_execution(f"Placing market exit for {option_type}: {buy_or_sell} {abs(total)} lots")
                 order_id = place_market_exit(api, tsym, buy_or_sell, abs(total))
+                CURRENT_STRATEGY_ORDERS.append(order_id)
                 wait_for_orders_to_complete(order_id, api_websocket, logger_entry, 100)
         # Implement logic to close all open orders and exit strategy
-        print("Strategy exited.")
-        trace_execution(f'pnl {calculate_total_pnl(api_websocket, True)}')
-        api.close_websocket()
+        final_qty = check_order_qty(api_websocket)
+        for option_type, total in final_qty['totals'].items():
+            if total != 0:
+                raise ValueError('not sold completely')
+        exited_strategy_completed = True
         if stop_event:
             stop_event.set()
+        trace_execution(f'Strategy exited successfully')
+        trace_execution(f'Strategy profit and loss {calculate_total_pnl(api_websocket, True)}')
+        # api.unsubscribe() ## need 
         return True
     except Exception as e:
         # Catch all other exceptions
-        api.close_websocket()
-        print(f"An unexpected error occurred exit_strategy: {e}")
-        logging.error(f'error in exit strategy : {e}')
-        return None
+        if not exited_strategy_completed:
+            # api.unsubscribe()
+            logging.error(f'An unexpected error occurred exit_strategy: {e}')
+        else:
+            trace_execution(f'exit_strategy Error but already exited: {e}')
+        raise ValueError('Error on exit')
 
 
 
@@ -567,31 +650,41 @@ def run_strategy(stop_event, api_websocket):
                     strategy_thread.join() # static uncomment
                     break
                 except TypeError as e:
-                    trace_execution(f'Typr error in run_strategy: {e}')
-                    exit_strategy(api_websocket, stop_event)
-                    return None
+                    if not exited_strategy_completed:
+                        trace_execution(f'Typr error in run_strategy: {e}')
+                        exit_strategy(api_websocket, stop_event)
+                    else:
+                        trace_execution(f'run_strategy Error but already exited: {e}')
+                    raise ValueError('Error on exit')
                 except ZeroDivisionError as e:
-                    trace_execution(f'Math error in run_strategy: {e}')
-                    exit_strategy(api_websocket, stop_event)
-                    return None
+                    if not exited_strategy_completed:
+                        trace_execution(f'Math error in run_strategy: {e}')
+                        exit_strategy(api_websocket, stop_event)
+                    else:
+                        trace_execution(f'run_strategy Error but already exited: {e}')
+                    raise ValueError('Error on exit')
                 except ValueError as e:
-                    trace_execution(f'Value error in run_strategy: {e}')
-                    exit_strategy(api_websocket, stop_event)
-                    return None
+                    if not exited_strategy_completed:
+                        trace_execution(f'Value error in run_strategy: {e}')
+                        exit_strategy(api_websocket, stop_event)
+                    else:
+                        trace_execution(f'run_strategy Error but already exited: {e}')
+                    raise ValueError('Error on exit')
                 except Exception as e:
                     # Catch all other exceptions
-                    trace_execution(f'error in run_strategy: {e}')
-                    exit_strategy(api_websocket, stop_event)
-                    return None
+                    if not exited_strategy_completed:
+                        trace_execution(f'error in run_strategy: {e}')
+                        exit_strategy(api_websocket, stop_event)
+                    else:
+                        trace_execution(f'run_strategy Error but already exited: {e}')
+                    raise ValueError('Error on exit')
 
 
 
         else:
             time_to_sleep = start_time - current_time
             print("Outside trading hours, strategy paused.")
-            time.sleep(time_to_sleep)
-            
-        
+            time.sleep(time_to_sleep)        
     return True
 
 def start_the_strategy(stop_event):
@@ -603,22 +696,54 @@ def start_the_strategy(stop_event):
         
         while not api_websocket.is_socket_opened():
             time.sleep(0.1)
-        run_strategy(stop_event, api_websocket)
+
+
+
+        new_data = {
+                        # API & WebSocket initialization
+            'api': api,
+            'api_websocket':api_websocket,
+
+            # Strategy parameters
+            'SYMBOL':SYMBOL,
+            'BUY_BACK_STATIC':BUY_BACK_STATIC,
+            'INITIAL_LOTS':INITIAL_LOTS,
+            'STRIKE_DIFFERENCE':STRIKE_DIFFERENCE,
+            'ONE_LOT_QUANTITY':ONE_LOT_QUANTITY,
+            'TARGET_PROFIT':TARGET_PROFIT,
+            'MAX_LOSS':MAX_LOSS,
+            'MAX_LOSS_PER_LEG':MAX_LOSS_PER_LEG,
+            'SAFETY_STOP_LOSS_PERCENTAGE':SAFETY_STOP_LOSS_PERCENTAGE,
+            'BUY_BACK_PERCENTAGE':BUY_BACK_PERCENTAGE,
+            'SELL_TARGET_PERCENTAGE':SELL_TARGET_PERCENTAGE,
+            'BUY_BACK_LOSS_PERCENTAGE':BUY_BACK_LOSS_PERCENTAGE,
+            'AVAILABLE_MARGIN':AVAILABLE_MARGIN,
+            'ENTRY_TIME':ENTRY_TIME,
+            'EXIT_TIME':EXIT_TIME,
+            'stop_event':stop_event,
+
+            # Dynamic configuration
+            'BUY_BACK_LOTS':BUY_BACK_LOTS,
+        }
+
+        my_strategy = NewStrategy(new_data)
+        my_strategy.run_strategy()
+        #run_strategy(stop_event, api_websocket)
         api.close_websocket()
         return True
     except TypeError as e:
         trace_execution(f"Type error occurred: {e}")
         exit_strategy(api_websocket, stop_event)
-        return None
+        raise ValueError('Error on exit')
     except ZeroDivisionError as e:
         trace_execution(f"Math error occurred: {e}")
         exit_strategy(api_websocket, stop_event)
-        return None
+        raise ValueError('Error on exit')
     except ValueError as e:
         trace_execution(f"Value error occurred: {e}")
         exit_strategy(api_websocket, stop_event)
-        return None
+        raise ValueError('Error on exit')
     except Exception as e:
         trace_execution(f"An unexpected error occurred: {e}")
         exit_strategy(api_websocket, stop_event)
-        return None
+        raise ValueError('Error on exit')
