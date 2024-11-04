@@ -8,7 +8,7 @@ ist = pytz.timezone('Asia/Kolkata')
 ist_datatime = datetime.now(ist)
 
 def round_to_nearest_0_05(value):
-    return round(float(value) * float(20)) / float(20)
+    return round(value * 20) / 20
 
 
 # Function to place sell orders for both legs
