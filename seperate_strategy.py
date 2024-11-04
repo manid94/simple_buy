@@ -1,16 +1,41 @@
 import time
 import logging
 from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots
+import logging
+import os
 from datetime import datetime
 from logger import LocalJsonLogger, ThrottlingLogger, logger_entry
 from custom_threading import MyThread
 
 
-logging.basicConfig(filename=f'strategy_log_files/strategy__{datetime.now(ist).strftime("%Y_%m%d_%H %M %S")}.log', level=logging.INFO)
+
+log_directory = 'strategy_log_files'
+os.makedirs(log_directory, exist_ok=True)
+
+# Initialize the logger
+logger_cust = logging.getLogger('my_logger1')
+logger_cust.setLevel(logging.INFO)
+
+# Create a file handler with a timestamped log file name
+log_filename = f'{log_directory}/strategy_{datetime.now(ist).strftime("%Y_%m%d_%H%M%S")}.log'
+handler = logging.FileHandler(log_filename)
+formatter = logging.Formatter('%(asctime)s - %(message)s')
+handler.setFormatter(formatter)
+
+# Add the handler to the logger
+if not logger_cust.handlers:  # Avoid adding multiple handlers if this setup code runs multiple times
+    logger_cust.addHandler(handler)
+
+# Example logging
+logger_cust.info("Logger initialized and ready for use.")
+
+
+
+
 
 def trace_execution(str= 'no data', data=datetime.now(ist).strftime("%Y %m %d - %H /%M/ %S")):
     print(f'{str} at {data}')
-    logging.info(f'{str} at {data}')
+    logger_cust.info(f'{str} at {data}')
 # flag to tell us if the api_websocket is open
 
 ist_datatime = datetime.now(ist)
@@ -18,6 +43,7 @@ ist_datatime = datetime.now(ist)
 class NewStrategy:
     def __init__(self, datas):
         # Logging
+        
         trace_execution('entered strategy')
 
         # API & WebSocket initialization
@@ -71,6 +97,8 @@ class NewStrategy:
 
         # Logging handler
         self.strategy_log_class = {}
+        # Ensure the directory exists
+
 
         
     def fetch_atm_strike(self):

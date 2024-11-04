@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 # Create two different loggers
 logger1 = logging.getLogger('my_logger1')
@@ -10,7 +11,7 @@ logger2.setLevel(logging.INFO)
 
 # Create file handlers for each logger
 handler1 = logging.FileHandler('log1.log')
-handler2 = logging.FileHandler('log2.log')
+handler2 = logging.FileHandler(f'strategy_log_files/strategy__{datetime.now().strftime("%Y_%m%d_%H %M %S")}.log')
 
 # Create formatters for each handler
 formatter1 = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
