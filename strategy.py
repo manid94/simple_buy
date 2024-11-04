@@ -106,8 +106,8 @@ strategy_log_class = {}
 
 # Utility function to fetch the ATM strike price
 def fetch_atm_strike(self):
-    trace_execution('entered in fetch_atm_strike')
     global LEG_TOKEN
+    trace_execution('entered in fetch_atm_strike')
     try:
         # Fetch the current Bank Nifty price
         banknifty_price = api.get_quotes(exchange='NSE', token='26009')
