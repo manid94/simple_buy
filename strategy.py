@@ -105,7 +105,7 @@ strategy_log_class = {}
 
 
 # Utility function to fetch the ATM strike price
-def fetch_atm_strike(self):
+def fetch_atm_strike():
     global LEG_TOKEN
     trace_execution('entered in fetch_atm_strike')
     try:
