@@ -9,6 +9,7 @@ from datetime import datetime
 from logger import LocalJsonLogger, ThrottlingLogger, logger_entry
 from api_websocket import OpenWebSocket
 from custom_threading import MyThread
+from seperate_strategy import NewStrategy
 
 
 
@@ -109,7 +110,7 @@ def fetch_atm_strike(self):
 
     try:
         # Fetch the current Bank Nifty price
-        banknifty_price = self.api.get_quotes(exchange='NSE', token='26009')
+        banknifty_price = api.get_quotes(exchange='NSE', token='26009')
         current_price = float(banknifty_price['lp'])
         print(current_price)
 
@@ -118,18 +119,18 @@ def fetch_atm_strike(self):
         print(atm_strike)
 
         # Generate nearest CE and PE option symbols based on ATM strike and strike difference
-        nearest_symbol_ce = f"{atm_strike + self.STRIKE_DIFFERENCE} NIFTY BANK CE"
-        nearest_symbol_pe = f"{atm_strike - self.STRIKE_DIFFERENCE} NIFTY BANK PE"
+        nearest_symbol_ce = f"{atm_strike + STRIKE_DIFFERENCE} NIFTY BANK CE"
+        nearest_symbol_pe = f"{atm_strike - STRIKE_DIFFERENCE} NIFTY BANK PE"
 
         # Fetch option chain details for both CE and PE
-        option_chains_ce = self.api.searchscrip(exchange='NFO', searchtext=nearest_symbol_ce)
-        option_chains_pe = self.api.searchscrip(exchange='NFO', searchtext=nearest_symbol_pe)
+        option_chains_ce = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_ce)
+        option_chains_pe = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_pe)
 
         ce_option = option_chains_ce['values'][0]
         pe_option = option_chains_pe['values'][0]
 
         # Set up token details for both CE and PE
-        self.LEG_TOKEN = {
+        LEG_TOKEN = {
             'PE': pe_option['token'],
             'CE': ce_option['token'],
             'PE_tsym': pe_option['tsym'],
@@ -140,9 +141,9 @@ def fetch_atm_strike(self):
         subscribeDataPE = f"NFO|{pe_option['token']}"
         subscribeDataCE = f"NFO|{ce_option['token']}"
         
-        if subscribeDataPE not in self.subscribedTokens or subscribeDataCE not in self.subscribedTokens:
-            self.api.subscribe([subscribeDataPE, subscribeDataCE])
-            self.subscribedTokens.extend([subscribeDataPE, subscribeDataCE])
+        if subscribeDataPE not in subscribedTokens or subscribeDataCE not in subscribedTokens:
+            api.subscribe([subscribeDataPE, subscribeDataCE])
+            subscribedTokens.extend([subscribeDataPE, subscribeDataCE])
 
         trace_execution('completed in fetch_atm_strike')
         return atm_strike
@@ -692,7 +693,39 @@ def start_the_strategy(stop_event):
         
         while not api_websocket.is_socket_opened():
             time.sleep(0.1)
-        run_strategy(stop_event, api_websocket)
+
+
+
+        new_data = {
+                    # API & WebSocket initialization
+        'api': api,
+        'api_websocket':api_websocket,
+
+        # Strategy parameters
+        'SYMBOL':SYMBOL,
+        'BUY_BACK_STATIC':BUY_BACK_STATIC,
+        'INITIAL_LOTS':INITIAL_LOTS,
+        'STRIKE_DIFFERENCE':STRIKE_DIFFERENCE,
+        'ONE_LOT_QUANTITY':ONE_LOT_QUANTITY,
+        'TARGET_PROFIT':TARGET_PROFIT,
+        'MAX_LOSS':MAX_LOSS,
+        'MAX_LOSS_PER_LEG':MAX_LOSS_PER_LEG,
+        'SAFETY_STOP_LOSS_PERCENTAGE':SAFETY_STOP_LOSS_PERCENTAGE,
+        'BUY_BACK_PERCENTAGE':BUY_BACK_PERCENTAGE,
+        'SELL_TARGET_PERCENTAGE':SELL_TARGET_PERCENTAGE,
+        'BUY_BACK_LOSS_PERCENTAGE':BUY_BACK_LOSS_PERCENTAGE,
+        'AVAILABLE_MARGIN':AVAILABLE_MARGIN,
+        'ENTRY_TIME':ENTRY_TIME,
+        'EXIT_TIME':EXIT_TIME,
+        'stop_event':stop_event,
+
+        # Dynamic configuration
+        'BUY_BACK_LOTS':BUY_BACK_LOTS,
+        }
+
+        my_strategy = NewStrategy(new_data)
+        my_strategy.run_strategy()
+        #run_strategy(stop_event, api_websocket)
         api.close_websocket()
         return True
     except TypeError as e:

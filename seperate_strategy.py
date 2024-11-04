@@ -127,12 +127,12 @@ class NewStrategy:
         try:
             # Check if PRICE_DATA and the required subkey exist
             price_data_key = option_type + '_PRICE_DATA'
-            if price_data_key not in PRICE_DATA:
+            if price_data_key not in self.PRICE_DATA:
                 trace_execution(f"Error: {price_data_key} not found in PRICE_DATA.")
                 raise ValueError('Error on exit')
             
             # Get the PRICE_DATAS for the given option_type
-            PRICE_DATAS = PRICE_DATA[price_data_key]
+            PRICE_DATAS = self.PRICE_DATA[price_data_key]
             
             # Create the keys for sell and buy nodes
             node_sell = type + '_SELL_' + option_type
@@ -169,7 +169,7 @@ class NewStrategy:
             pnl = difference * lots * self.ONE_LOT_QUANTITY
             return float(pnl)
         except Exception as e:
-            if not exited_strategy_completed:
+            if not self.exited_strategy_completed:
                 self.exit_strategy()
                 trace_execution(f'Error in calculate_leg_pnl: {e}')
             else:
@@ -214,7 +214,37 @@ class NewStrategy:
             return 0.0  # Return 0 as default in case of error
         
         
-        
+    def calculate_total_pnl(self, log=False):
+        try:
+            # Calculate PnL for each leg type and trade stage
+            ce_entry_pnl = self.calculate_leg_pnl('CE', 'INITIAL', self.INITIAL_LOTS)
+            pe_entry_pnl = self.calculate_leg_pnl('PE', 'INITIAL', self.INITIAL_LOTS)
+            ce_pnl = self.calculate_leg_pnl('CE', 'BUY_BACK', self.BUY_BACK_LOTS)
+            pe_pnl = self.calculate_leg_pnl('PE', 'BUY_BACK', self.BUY_BACK_LOTS)
+            ce_re_entry_pnl = self.calculate_leg_pnl('CE', 'RE_ENTRY', self.INITIAL_LOTS)
+            pe_re_entry_pnl = self.calculate_leg_pnl('PE', 'RE_ENTRY', self.INITIAL_LOTS)
+
+            # Sum up the PnL values
+            total_pnl = ce_pnl + pe_pnl + ce_entry_pnl + pe_entry_pnl + ce_re_entry_pnl + pe_re_entry_pnl
+
+            # Optional logging of PnL components if log is True
+            if log:
+                trace_execution(
+                    f'Total PnL calculation breakdown: ce_pnl={ce_pnl}, pe_pnl={pe_pnl}, '
+                    f'ce_entry_pnl={ce_entry_pnl}, pe_entry_pnl={pe_entry_pnl}, '
+                    f'ce_re_entry_pnl={ce_re_entry_pnl}, pe_re_entry_pnl={pe_re_entry_pnl}'
+                )
+            return total_pnl
+
+        except Exception as e:
+            # Handle errors and ensure strategy exits gracefully
+            if not self.exited_strategy_completed:
+                trace_execution(f'Error in calculate_total_pnl: {e}')
+                self.exit_strategy()
+            else:
+                trace_execution(f'calculate_total_pnl Error but already exited: {e}')
+            return 0.0  # Return 0 as a safe default in case of error
+
         
     def check_for_stop_loss(self, option_type, selldetails, buydetails):
         trace_execution('entered in check_for_stop_loss')
@@ -718,6 +748,7 @@ class NewStrategy:
                     sell_price_pe = self.api_websocket.fetch_last_trade_price('PE', self.LEG_TOKEN)
                     
                     trace_execution(f'Option Prices - CE: {sell_price_ce}, PE: {sell_price_pe}')
+                    trace_execution(f'passed OPTION PRICE {atm_strike - self.STRIKE_DIFFERENCE} pe price {sell_price_pe} _ {atm_strike + self.STRIKE_DIFFERENCE} pe price {sell_price_pe}')
 
                     # Calculate lots based on available margin if BUY_BACK_STATIC is not set
                     if not self.BUY_BACK_STATIC:
@@ -737,8 +768,8 @@ class NewStrategy:
 
                     # Start monitoring threads for CE and PE legs and strategy
                     self.strategy_running = True
-                    ce_thread = MyThread(target=self.monitor_leg, args=('CE', sell_price_ce, atm_strike + self.STRIKE_DIFFERENCE), daemon=True)
-                    pe_thread = MyThread(target=self.monitor_leg, args=('PE', sell_price_pe, atm_strike - self.STRIKE_DIFFERENCE), daemon=True)
+                    ce_thread = MyThread(target=self.monitor_leg, args=('CE', sell_price_ce), daemon=True)
+                    pe_thread = MyThread(target=self.monitor_leg, args=('PE', sell_price_pe), daemon=True)
                     strategy_thread = MyThread(target=self.monitor_strategy, daemon=True)
 
                     try:
