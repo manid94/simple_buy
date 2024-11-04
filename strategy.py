@@ -114,9 +114,26 @@ def fetch_atm_strike(self):
         current_price = float(banknifty_price['lp'])
         print(current_price)
 
-        # Calculate the ATM strike price rounded to the nearest 100
-        atm_strike = round(current_price / 100) * 100
-        print(atm_strike)
+    # print(nearest_symbol_ce)
+    # print(api.searchscrip(exchange='NFO', searchtext=nearest_symbol_ce))
+    # print(api.searchscrip(exchange='NFO', searchtext=nearest_symbol_pe))
+    option_chains_ce = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_ce)
+    option_chains_pe = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_pe)
+    pe_option = option_chains_pe['values'][0]
+    ce_option = option_chains_ce['values'][0]
+    subscribeDataPE = 'NFO|'+pe_option['token']
+    subscribeDataCE = 'NFO|'+ce_option['token']
+    LEG_TOKEN['PE'] = pe_option['token']
+    LEG_TOKEN['CE'] = ce_option['token']
+    LEG_TOKEN['PE_tsym'] = pe_option['tsym']
+    LEG_TOKEN['CE_tsym'] = ce_option['tsym']
+    if subscribeDataPE not in subscribedTokens:
+        api.subscribe([subscribeDataPE,subscribeDataCE])
+        subscribedTokens.append(subscribeDataPE)
+        trace_execution(f'{[subscribeDataPE,subscribeDataCE]}')
+    trace_execution('completed in fetch_atm_strike')
+    time.sleep(3) # mandatory
+    return atm_strike  # Round to nearest 100
 
         # Generate nearest CE and PE option symbols based on ATM strike and strike difference
         nearest_symbol_ce = f"{atm_strike + STRIKE_DIFFERENCE} NIFTY BANK CE"
@@ -616,8 +633,8 @@ def run_strategy(stop_event, api_websocket):
                 trace_execution('passed atm strike')
                 sell_price_ce = api_websocket.fetch_last_trade_price('CE', LEG_TOKEN)
                 sell_price_pe = api_websocket.fetch_last_trade_price('PE', LEG_TOKEN)
-                print(f'sell_price_ce{sell_price_ce}:sell_price_pe:{sell_price_pe}')
-                trace_execution(f'passed OPTION PRICE {atm_strike - STRIKE_DIFFERENCE} pe price {sell_price_pe} _ {atm_strike + STRIKE_DIFFERENCE} pe price {sell_price_pe}')
+                trace_execution(f'sell_price_ce{sell_price_ce}:sell_price_pe:{sell_price_pe}')
+                trace_execution(f'passed OPTION PRICE {atm_strike - STRIKE_DIFFERENCE} pe price {sell_price_pe} _ {atm_strike + STRIKE_DIFFERENCE} ce price {sell_price_ce}')
                 if(not BUY_BACK_STATIC):
                     ce_lot = int(AVAILABLE_MARGIN/(ONE_LOT_QUANTITY * sell_price_ce))
                     pe_lot = int(AVAILABLE_MARGIN/(ONE_LOT_QUANTITY * sell_price_pe))

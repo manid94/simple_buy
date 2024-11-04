@@ -95,7 +95,7 @@ class OpenWebSocket:
     
     def fetch_last_trade_price(self, option_type, LEG_TOKEN):
         # print('Deepak')
-        # print(SYMBOLDICT)
+        # print(self.SYMBOLDICT)
         
         # Check if the option_type exists in LEG_TOKEN
         if option_type not in LEG_TOKEN:
