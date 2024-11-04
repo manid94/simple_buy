@@ -131,8 +131,10 @@ def fetch_atm_strike():
     LEG_TOKEN['CE_tsym'] = ce_option['tsym']
     if subscribeDataPE not in subscribedTokens:
         api.subscribe([subscribeDataPE,subscribeDataCE])
-    subscribedTokens.append(subscribeDataPE)
+        subscribedTokens.append(subscribeDataPE)
+        trace_execution(f'{[subscribeDataPE,subscribeDataCE]}')
     trace_execution('completed in fetch_atm_strike')
+    time.sleep(3)
     return atm_strike  # Round to nearest 100
 
 
