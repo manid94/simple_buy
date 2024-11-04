@@ -9,6 +9,7 @@ from datetime import datetime
 from logger import LocalJsonLogger, ThrottlingLogger, logger_entry
 from api_websocket import OpenWebSocket
 from custom_threading import MyThread
+from seperate_strategy import NewStrategy
 
 
 
@@ -31,9 +32,9 @@ ONE_LOT_QUANTITY = 15  # Number of units per lot in Bank Nifty
 TARGET_PROFIT = 500
 MAX_LOSS = 300
 MAX_LOSS_PER_LEG = 200
-SAFETY_STOP_LOSS_PERCENTAGE = 0.83
-BUY_BACK_PERCENTAGE = 0.82
-SELL_TARGET_PERCENTAGE = 0.025
+SAFETY_STOP_LOSS_PERCENTAGE = 0.985 #0.83
+BUY_BACK_PERCENTAGE = 0.98 #0.82
+SELL_TARGET_PERCENTAGE = 0.01 # 0.025
 BUY_BACK_LOSS_PERCENTAGE = 0.90
 AVAILABLE_MARGIN = 5000
 ENTRY_TIME = {
@@ -104,37 +105,55 @@ strategy_log_class = {}
 
 
 # Utility function to fetch the ATM strike price
-def fetch_atm_strike():
+def fetch_atm_strike(self):
     global LEG_TOKEN
-    
     trace_execution('entered in fetch_atm_strike')
-    banknifty_price = api.get_quotes(exchange='NSE', token='26009')
-    current_price = banknifty_price['lp']
-    print(float(current_price))
-    atm_strike = round(float(current_price) / 100) * 100
-    print(atm_strike)
+    try:
+        # Fetch the current Bank Nifty price
+        symbol_details = api.get_quotes(exchange='NSE', token='26009')
+        current_price = float(symbol_details['lp'])
+        symbol_name = symbol_details['symname']
+        print(current_price)
 
-    nearest_symbol_ce = (str(atm_strike+STRIKE_DIFFERENCE)+' nifty bANK' + ' ce')
-    nearest_symbol_pe = (str(atm_strike-STRIKE_DIFFERENCE)+' nifty bANK' + ' pe')
+        # Calculate the ATM strike price rounded to the nearest 100
+        atm_strike = round(current_price / 100) * 100
+        print(atm_strike)
 
-    # print(nearest_symbol_ce)
-    # print(api.searchscrip(exchange='NFO', searchtext=nearest_symbol_ce))
-    # print(api.searchscrip(exchange='NFO', searchtext=nearest_symbol_pe))
-    option_chains_ce = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_ce)
-    option_chains_pe = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_pe)
-    pe_option = option_chains_pe['values'][0]
-    ce_option = option_chains_ce['values'][0]
-    subscribeDataPE = 'NFO|'+pe_option['token']
-    subscribeDataCE = 'NFO|'+ce_option['token']
-    LEG_TOKEN['PE'] = pe_option['token']
-    LEG_TOKEN['CE'] = ce_option['token']
-    LEG_TOKEN['PE_tsym'] = pe_option['tsym']
-    LEG_TOKEN['CE_tsym'] = ce_option['tsym']
-    if subscribeDataPE not in subscribedTokens:
-        api.subscribe([subscribeDataPE,subscribeDataCE])
-    subscribedTokens.append(subscribeDataPE)
-    trace_execution('completed in fetch_atm_strike')
-    return atm_strike  # Round to nearest 100
+        # Generate nearest CE and PE option symbols based on ATM strike and strike difference
+        nearest_symbol_ce = f"{symbol_name} {atm_strike + STRIKE_DIFFERENCE} CE"
+        nearest_symbol_pe = f"{symbol_name} {atm_strike - STRIKE_DIFFERENCE} PE"
+
+        # Fetch option chain details for both CE and PE
+        option_chains_ce = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_ce)
+        option_chains_pe = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_pe)
+
+        ce_option = option_chains_ce['values'][0]
+        pe_option = option_chains_pe['values'][0]
+
+        # Set up token details for both CE and PE
+        LEG_TOKEN = {
+            'PE': pe_option['token'],
+            'CE': ce_option['token'],
+            'PE_tsym': pe_option['tsym'],
+            'CE_tsym': ce_option['tsym']
+        }
+
+        # Subscription for tokens if not already subscribed
+        subscribeDataPE = f"NFO|{pe_option['token']}"
+        subscribeDataCE = f"NFO|{ce_option['token']}"
+        
+        if subscribeDataPE not in subscribedTokens or subscribeDataCE not in subscribedTokens:
+            api.subscribe([subscribeDataPE, subscribeDataCE])
+            subscribedTokens.extend([subscribeDataPE, subscribeDataCE])
+            trace_execution(f'{[subscribeDataPE,subscribeDataCE]}')
+
+        trace_execution('completed in fetch_atm_strike')
+        return atm_strike
+
+    except Exception as e:
+        trace_execution(f'Error in fetch_atm_strike: {e}')
+        return 0
+    
 
 
 # Calculate PNL based on current leg status
@@ -600,8 +619,8 @@ def run_strategy(stop_event, api_websocket):
                 trace_execution('passed atm strike')
                 sell_price_ce = api_websocket.fetch_last_trade_price('CE', LEG_TOKEN)
                 sell_price_pe = api_websocket.fetch_last_trade_price('PE', LEG_TOKEN)
-                print(f'sell_price_ce{sell_price_ce}:sell_price_pe:{sell_price_pe}')
-                trace_execution(f'passed OPTION PRICE {atm_strike - STRIKE_DIFFERENCE} pe price {sell_price_pe} _ {atm_strike + STRIKE_DIFFERENCE} pe price {sell_price_pe}')
+                trace_execution(f'sell_price_ce{sell_price_ce}:sell_price_pe:{sell_price_pe}')
+                trace_execution(f'passed OPTION PRICE {atm_strike - STRIKE_DIFFERENCE} pe price {sell_price_pe} _ {atm_strike + STRIKE_DIFFERENCE} ce price {sell_price_ce}')
                 if(not BUY_BACK_STATIC):
                     ce_lot = int(AVAILABLE_MARGIN/(ONE_LOT_QUANTITY * sell_price_ce))
                     pe_lot = int(AVAILABLE_MARGIN/(ONE_LOT_QUANTITY * sell_price_pe))
@@ -677,7 +696,39 @@ def start_the_strategy(stop_event):
         
         while not api_websocket.is_socket_opened():
             time.sleep(0.1)
-        run_strategy(stop_event, api_websocket)
+
+
+
+        new_data = {
+                        # API & WebSocket initialization
+            'api': api,
+            'api_websocket':api_websocket,
+
+            # Strategy parameters
+            'SYMBOL':SYMBOL,
+            'BUY_BACK_STATIC':BUY_BACK_STATIC,
+            'INITIAL_LOTS':INITIAL_LOTS,
+            'STRIKE_DIFFERENCE':STRIKE_DIFFERENCE,
+            'ONE_LOT_QUANTITY':ONE_LOT_QUANTITY,
+            'TARGET_PROFIT':TARGET_PROFIT,
+            'MAX_LOSS':MAX_LOSS,
+            'MAX_LOSS_PER_LEG':MAX_LOSS_PER_LEG,
+            'SAFETY_STOP_LOSS_PERCENTAGE':SAFETY_STOP_LOSS_PERCENTAGE,
+            'BUY_BACK_PERCENTAGE':BUY_BACK_PERCENTAGE,
+            'SELL_TARGET_PERCENTAGE':SELL_TARGET_PERCENTAGE,
+            'BUY_BACK_LOSS_PERCENTAGE':BUY_BACK_LOSS_PERCENTAGE,
+            'AVAILABLE_MARGIN':AVAILABLE_MARGIN,
+            'ENTRY_TIME':ENTRY_TIME,
+            'EXIT_TIME':EXIT_TIME,
+            'stop_event':stop_event,
+
+            # Dynamic configuration
+            'BUY_BACK_LOTS':BUY_BACK_LOTS,
+        }
+
+        my_strategy = NewStrategy(new_data)
+        my_strategy.run_strategy()
+        #run_strategy(stop_event, api_websocket)
         api.close_websocket()
         return True
     except TypeError as e:
