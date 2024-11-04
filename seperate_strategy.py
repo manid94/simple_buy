@@ -63,7 +63,7 @@ class NewStrategy:
         # Strategy status flags
         self.strategy_running = False
         self.exited_strategy_started = False
-        self.exited_strategy_completed = True
+        self.exited_strategy_completed = False
 
         # Sell prices for CE and PE
         self.sell_price_ce = 0
@@ -318,11 +318,11 @@ class NewStrategy:
             buy_back_lots = self.BUY_BACK_LOTS * self.ONE_LOT_QUANTITY
 
             # Set and log buy-back average price
-            buy_back_avg_price = buydetails['buy_back_avg_price']
+            buy_back_avg_price = float(buydetails['buy_back_avg_price'])
             self.PRICE_DATA[f"{option_type}_PRICE_DATA"][f"BUY_BACK_BUY_{option_type}"] = buy_back_avg_price
-
+            trace_execution(f'crossed 1 {buy_back_avg_price} {self.PRICE_DATA[f"{option_type}_PRICE_DATA"][f"BUY_BACK_BUY_{option_type}"]}')
             # Calculate the sell target price based on the buy-back price and target percentage
-            sell_target_price = round_to_nearest_0_05(buy_back_avg_price * (1 + self.SELL_TARGET_PERCENTAGE))
+            sell_target_price = round_to_nearest_0_05(buy_back_avg_price * float(1 + self.SELL_TARGET_PERCENTAGE))
             trace_execution(f"Calculated sell target price for {option_type}: {sell_target_price}")
 
             # Place a limit sell order
@@ -532,7 +532,7 @@ class NewStrategy:
                     break
 
                 # Calculate the PNL and check for target or max loss conditions
-                pnl = self.calculate_total_pnl()
+                pnl = self.calculate_total_pnl(False)
                 if pnl >= self.TARGET_PROFIT and not self.exited_strategy_started:
                     trace_execution(f"Target profit of ₹{self.TARGET_PROFIT} reached. Exiting strategy.")
                     self.exit_strategy()
@@ -692,7 +692,7 @@ class NewStrategy:
                 self.stop_event.set()
             
             trace_execution('Strategy exited successfully')
-            trace_execution(f'Strategy profit and loss: {self.calculate_total_pnl(show=True)}')
+            trace_execution(f'Strategy profit and loss: {self.calculate_total_pnl(True)}')
             
             # Optionally unsubscribe from all symbols
             # self.api.unsubscribe_all()
@@ -748,7 +748,7 @@ class NewStrategy:
                     sell_price_pe = self.api_websocket.fetch_last_trade_price('PE', self.LEG_TOKEN)
                     
                     trace_execution(f'Option Prices - CE: {sell_price_ce}, PE: {sell_price_pe}')
-                    trace_execution(f'passed OPTION PRICE {atm_strike - self.STRIKE_DIFFERENCE} pe price {sell_price_pe} _ {atm_strike + self.STRIKE_DIFFERENCE} pe price {sell_price_pe}')
+                    trace_execution(f'passed OPTION PRICE {atm_strike - self.STRIKE_DIFFERENCE} pe price {sell_price_pe} _ {atm_strike + self.STRIKE_DIFFERENCE} pe price {sell_price_ce}')
 
                     # Calculate lots based on available margin if BUY_BACK_STATIC is not set
                     if not self.BUY_BACK_STATIC:
