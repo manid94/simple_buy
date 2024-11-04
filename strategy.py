@@ -537,7 +537,7 @@ def run_strategy(stop_event, api_websocket):
                 sell_price_ce = api_websocket.fetch_last_trade_price('CE', LEG_TOKEN)
                 sell_price_pe = api_websocket.fetch_last_trade_price('PE', LEG_TOKEN)
                 print(f'sell_price_ce{sell_price_ce}:sell_price_pe:{sell_price_pe}')
-                trace_execution(f'passed OPTION PRICE {atm_strike - STRIKE_DIFFERENCE} pe price {sell_price_pe} _ {atm_strike + STRIKE_DIFFERENCE} pe price {sell_price_pe}')
+                trace_execution(f'passed OPTION PRICE {atm_strike - STRIKE_DIFFERENCE} pe price {sell_price_pe} _ {atm_strike + STRIKE_DIFFERENCE} ce price {sell_price_ce}')
                 if(not BUY_BACK_STATIC):
                     ce_lot = int(AVAILABLE_MARGIN/(ONE_LOT_QUANTITY * sell_price_ce))
                     pe_lot = int(AVAILABLE_MARGIN/(ONE_LOT_QUANTITY * sell_price_pe))
