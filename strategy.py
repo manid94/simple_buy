@@ -110,44 +110,44 @@ def fetch_atm_strike(self):
     trace_execution('entered in fetch_atm_strike')
     try:
         # Fetch the current Bank Nifty price
-        banknifty_price = api.get_quotes(exchange='NSE', token='26009')
-        current_price = float(banknifty_price['lp'])
-        print(current_price)
+    banknifty_price = api.get_quotes(exchange='NSE', token='26009')
+    current_price = float(banknifty_price['lp'])
+    print(current_price)
 
-        # Calculate the ATM strike price rounded to the nearest 100
-        atm_strike = round(current_price / 100) * 100
-        print(atm_strike)
+    # Calculate the ATM strike price rounded to the nearest 100
+    atm_strike = round(current_price / 100) * 100
+    print(atm_strike)
 
-        # Generate nearest CE and PE option symbols based on ATM strike and strike difference
-        nearest_symbol_ce = f"{atm_strike + STRIKE_DIFFERENCE} NIFTY BANK CE"
-        nearest_symbol_pe = f"{atm_strike - STRIKE_DIFFERENCE} NIFTY BANK PE"
+    # Generate nearest CE and PE option symbols based on ATM strike and strike difference
+    nearest_symbol_ce = f"{atm_strike + STRIKE_DIFFERENCE} NIFTY BANK CE"
+    nearest_symbol_pe = f"{atm_strike - STRIKE_DIFFERENCE} NIFTY BANK PE"
 
-        # Fetch option chain details for both CE and PE
-        option_chains_ce = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_ce)
-        option_chains_pe = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_pe)
+    # Fetch option chain details for both CE and PE
+    option_chains_ce = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_ce)
+    option_chains_pe = api.searchscrip(exchange='NFO', searchtext=nearest_symbol_pe)
 
-        ce_option = option_chains_ce['values'][0]
-        pe_option = option_chains_pe['values'][0]
+    ce_option = option_chains_ce['values'][0]
+    pe_option = option_chains_pe['values'][0]
 
-        # Set up token details for both CE and PE
-        LEG_TOKEN = {
-            'PE': pe_option['token'],
-            'CE': ce_option['token'],
-            'PE_tsym': pe_option['tsym'],
-            'CE_tsym': ce_option['tsym']
-        }
+    # Set up token details for both CE and PE
+    LEG_TOKEN = {
+        'PE': pe_option['token'],
+        'CE': ce_option['token'],
+        'PE_tsym': pe_option['tsym'],
+        'CE_tsym': ce_option['tsym']
+    }
 
-        # Subscription for tokens if not already subscribed
-        subscribeDataPE = f"NFO|{pe_option['token']}"
-        subscribeDataCE = f"NFO|{ce_option['token']}"
-        
-        if subscribeDataPE not in subscribedTokens or subscribeDataCE not in subscribedTokens:
-            api.subscribe([subscribeDataPE, subscribeDataCE])
-            subscribedTokens.extend([subscribeDataPE, subscribeDataCE])
-            trace_execution(f'{[subscribeDataPE,subscribeDataCE]}')
+    # Subscription for tokens if not already subscribed
+    subscribeDataPE = f"NFO|{pe_option['token']}"
+    subscribeDataCE = f"NFO|{ce_option['token']}"
+    
+    if subscribeDataPE not in subscribedTokens or subscribeDataCE not in subscribedTokens:
+        api.subscribe([subscribeDataPE, subscribeDataCE])
+        subscribedTokens.extend([subscribeDataPE, subscribeDataCE])
+        trace_execution(f'{[subscribeDataPE,subscribeDataCE]}')
 
-        trace_execution('completed in fetch_atm_strike')
-        return atm_strike
+    trace_execution('completed in fetch_atm_strike')
+    return atm_strike
 
     except Exception as e:
         trace_execution(f'Error in fetch_atm_strike: {e}')
