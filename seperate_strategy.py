@@ -112,6 +112,7 @@ class NewStrategy:
             if subscribeDataPE not in self.subscribedTokens or subscribeDataCE not in self.subscribedTokens:
                 self.api.subscribe([subscribeDataPE, subscribeDataCE])
                 self.subscribedTokens.extend([subscribeDataPE, subscribeDataCE])
+                time.sleep(5)
 
             trace_execution('completed in fetch_atm_strike')
             return atm_strike
