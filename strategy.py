@@ -134,7 +134,7 @@ def fetch_atm_strike():
         subscribedTokens.append(subscribeDataPE)
         trace_execution(f'{[subscribeDataPE,subscribeDataCE]}')
     trace_execution('completed in fetch_atm_strike')
-    time.sleep(3)
+    time.sleep(3) # mandatory
     return atm_strike  # Round to nearest 100
 
 
