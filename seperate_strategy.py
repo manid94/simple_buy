@@ -132,7 +132,7 @@ class NewStrategy:
             price_data_key = option_type + '_PRICE_DATA'
             if price_data_key not in self.PRICE_DATA:
                 self.trace_execution(f"Error: {price_data_key} not found in PRICE_DATA.")
-                raise ValueError('Error on exit')
+                raise ValueError(f'Error on calculate_leg_pnl {price_data_key} not found in PRICE_DATA.')
             
             # Get the PRICE_DATAS for the given option_type
             PRICE_DATAS = self.PRICE_DATA[price_data_key]
@@ -501,7 +501,7 @@ class NewStrategy:
                 self.exit_strategy()
             else:
                 self.trace_execution(f'monitor_leg Error but already exited: {e}')
-            raise ValueError('Error on exit')
+            return True
             
         except Exception as e:
             # Catch all other exceptions
@@ -510,7 +510,7 @@ class NewStrategy:
                 self.exit_strategy()
             else:
                 self.trace_execution(f'monitor_leg Error but already exited: {e}')
-            raise ValueError('Error on exit')
+            return True
 
 
     # Function to monitor the strategy
@@ -555,7 +555,7 @@ class NewStrategy:
                 self.exit_strategy()
             else:
                 self.trace_execution(f'monitor_strategy Error but already exited: {e}')
-            raise ValueError('Error on exit')
+            return True
 
         except Exception as e:
             # Catch all other exceptions
@@ -564,7 +564,7 @@ class NewStrategy:
                 self.exit_strategy()
             else:
                 self.trace_execution(f'monitor_strategy Error but already exited: {e}')
-            raise ValueError('Error on exit')
+            return True
 
 
     def check_order_qty(self):
@@ -646,7 +646,7 @@ class NewStrategy:
             self.strategy_running = False
             
             # Check if exit strategy has already been initiated
-            if self.exited_strategy_started:
+            if self.exited_strategy_started and not self.exited_strategy_completed:
                 raise ValueError('Error: exit_strategy already called.')
             self.exited_strategy_started = True
             self.trace_execution('Exiting strategy...')
@@ -706,11 +706,12 @@ class NewStrategy:
             # Handle exceptions and ensure proper logging
             if not self.exited_strategy_completed:
                 self.trace_execution(f'An error occurred in exit_strategy: {e}')
+                self.exit_strategy()
                 # Optionally unsubscribe from all symbols
                 # self.api.unsubscribe_all()
             else:
                 self.trace_execution(f'exit_strategy Error but already exited: {e}')
-            raise ValueError('Error on exit')
+            return True
 
 
     def run_strategy(self):
@@ -792,16 +793,16 @@ class NewStrategy:
                             self.trace_execution(f'Error in run_strategy ({type(e).__name__}): {e}')
                             self.exit_strategy()
                         else:
-                            self.trace_execution(f'run_strategy Error but already exited: {e}')
-                        raise ValueError('Error on exit')
+                            self.trace_execution(f'{self.SYMBOL} run_strategy Error but already exited: {e}')
+                        return True
 
                     except Exception as e:
                         if not self.exited_strategy_completed:
-                            self.trace_execution(f'Unexpected error in run_strategy: {e}')
+                            self.trace_execution(f'{self.SYMBOL} Unexpected error in run_strategy: {e}')
                             self.exit_strategy()
                         else:
-                            self.trace_execution(f'run_strategy Error but already exited: {e}')
-                        raise ValueError('Error on exit')
+                            self.trace_execution(f'{self.SYMBOL} run_strategy Error but already exited: {e}')
+                        return True
 
             else:
                 # Calculate time to sleep until start_time
