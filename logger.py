@@ -11,22 +11,25 @@ from custom_threading import MyThread
 ist = pytz.timezone('Asia/Kolkata')
 
 class LocalJsonLogger:
-    def __init__(self):
-        self.log_file_name = f'logger_files/trading_log_{datetime.now(ist).strftime("%Y%m%d_%H%M%S")}.json'
+    def __init__(self, trace_execution):
+        
         self.log_data = []
-
+        self.trace_execution = trace_execution
+        trace_execution('entered logger')
+        self.log_file_name = f'logger_files/trading_log_{datetime.now(ist).strftime("%Y%m%d_%H%M%S")}.json'
         # Ensure the directory exists
         self.ensure_directory_exists()
-
+        trace_execution('logger file created')
         # Create a new log file locally
         self.create_new_log_file()
+        trace_execution('completed order data log creation')
 
     def ensure_directory_exists(self):
         """Ensure the directory for the log file exists."""
         directory = os.path.dirname(self.log_file_name)
         if not os.path.exists(directory):
             os.makedirs(directory)
-            print(f"Directory '{directory}' created.")
+            self.trace_execution(f"Directory '{directory}' created.")
 
     def create_new_log_file(self):
         """Create an empty JSON log file locally."""
@@ -61,7 +64,7 @@ class LocalJsonLogger:
         avg_price = datas.get("average_price")
         status = datas.get("status")
     
-        # print(f'inside generate_log_entry {datas}')
+        # self.trace_execution(f'inside generate_log_entry {datas}')
         """Generate a new log entry with random data (simulating a trading strategy)."""
         return {
             "time": str(datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")),

@@ -209,6 +209,7 @@ def calculate_leg_pnl(option_type, type, lots, api_websocket):
             trace_execution(f'Error in calculate_leg_pnl: {e}')
         else:
             trace_execution(f'calculate_leg_pnl Error but already exited: {e}')
+        return 0.0
         
 
     
@@ -231,6 +232,7 @@ def calculate_total_pnl(api_websocket, log=False):
             exit_strategy(api_websocket, {})
         else:
             trace_execution(f'calculate_total_pnl Error but already exited: {e}')
+        return 0.0
 
 def check_for_stop_loss(option_type, stop_event, selldetails, buydetails, api_websocket):
     global PRICE_DATA
@@ -603,7 +605,7 @@ def exit_strategy(api_websocket, stop_event):
 def run_strategy(stop_event, api_websocket):
     trace_execution('passed run_strategy')
     global strategy_running, sell_price_ce, sell_price_pe, PRICE_DATA, BUY_BACK_LOTS, strategy_log_class
-    strategy_log_class = LocalJsonLogger()
+    strategy_log_class = LocalJsonLogger(trace_execution)
     start_time = ist_datatime.replace(hour=ENTRY_TIME['hours'], minute=ENTRY_TIME['minutes'], second=ENTRY_TIME['seconds'], microsecond=0).time()
     end_time = ist_datatime.replace(hour=EXIT_TIME['hours'], minute=EXIT_TIME['minutes'], second=EXIT_TIME['seconds'], microsecond=0).time()
     lots = INITIAL_LOTS * ONE_LOT_QUANTITY

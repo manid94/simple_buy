@@ -2,8 +2,17 @@ import logging
 import os
 from utils import ist
 from datetime import datetime
+import pytz
 
 log_directory = 'strategy_log_files'
+IST = pytz.timezone('Asia/Kolkata')
+
+class ISTFormatter(logging.Formatter):
+    def formatTime(self, record, datefmt=None):
+        # Convert record's creation time to IST
+        record_time = datetime.fromtimestamp(record.created, IST)
+        return record_time.strftime('%Y-%m-%d %H:%M:%S')
+
 def createLogger(name):
     os.makedirs(log_directory, exist_ok=True)
     # Initialize the logger
@@ -13,7 +22,7 @@ def createLogger(name):
     # Create a file handler with a timestamped log file name
     log_filename = f'{log_directory}/strategy_{name}{datetime.now(ist).strftime("%Y_%m%d_%H%M%S")}.log'
     handler = logging.FileHandler(log_filename)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    formatter = ISTFormatter('%(asctime)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
 
     # Add the handler to the logger

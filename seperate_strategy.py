@@ -480,8 +480,8 @@ class NewStrategy:
                         self.api_websocket,
                         logger_entry,
                         self.strategy_log_class,
-                        timeout=40,
-                        interval=0.25
+                        40,
+                        0.25
                     ):
                         # Log completion and add order details to current strategy orders
                         self.CURRENT_STRATEGY_ORDERS.append(sell_target_order_id)
@@ -677,7 +677,7 @@ class NewStrategy:
                         self.api_websocket,
                         logger_entry,
                         self.strategy_log_class,
-                        timeout=100
+                        100
                     )
             
             # Verify that all positions have been closed
@@ -716,7 +716,7 @@ class NewStrategy:
         self.trace_execution('passed run_strategy')
         
         # Initialize necessary variables
-        self.strategy_log_class = LocalJsonLogger()
+        self.strategy_log_class = LocalJsonLogger(self.trace_execution)
         start_time = ist_datatime.replace(
             hour=self.ENTRY_TIME['hours'], 
             minute=self.ENTRY_TIME['minutes'], 
