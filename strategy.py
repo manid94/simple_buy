@@ -705,11 +705,11 @@ def start_the_strategy(stop_event):
             'api_websocket':api_websocket,
 
             # Strategy parameters
-            'SYMBOL':SYMBOL,
+            'SYMBOL':"NIFTY",
             'BUY_BACK_STATIC':BUY_BACK_STATIC,
             'INITIAL_LOTS':INITIAL_LOTS,
             'STRIKE_DIFFERENCE':STRIKE_DIFFERENCE,
-            'ONE_LOT_QUANTITY':ONE_LOT_QUANTITY,
+            'ONE_LOT_QUANTITY': 25,
             'TARGET_PROFIT':TARGET_PROFIT,
             'MAX_LOSS':MAX_LOSS,
             'MAX_LOSS_PER_LEG':MAX_LOSS_PER_LEG,
