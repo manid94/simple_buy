@@ -16,7 +16,7 @@ class ISTFormatter(logging.Formatter):
 def createLogger(name):
     os.makedirs(log_directory, exist_ok=True)
     # Initialize the logger
-    logger_cust = logging.getLogger('my_logger1')
+    logger_cust = logging.getLogger(name)
     logger_cust.setLevel(logging.INFO)
 
     # Create a file handler with a timestamped log file name
