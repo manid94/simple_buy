@@ -13,7 +13,7 @@ ist_datatime = datetime.now(ist)
 class NewStrategy:
     def __init__(self, datas):
         # Logging
-        self.logger = createLogger('nifty')
+        self.logger = createLogger(datas['SYMBOL'])
         
         self.trace_execution('entered strategy')
 
@@ -23,6 +23,7 @@ class NewStrategy:
 
         # Strategy parameters
         self.SYMBOL = datas['SYMBOL']
+        self.token = datas['token']
         self.BUY_BACK_STATIC = datas['BUY_BACK_STATIC']
         self.INITIAL_LOTS = datas['INITIAL_LOTS']
         self.STRIKE_DIFFERENCE = datas['STRIKE_DIFFERENCE']
@@ -80,7 +81,7 @@ class NewStrategy:
 
         try:
             # Fetch the current NIFTY price
-            symbol_details = self.api.get_quotes(exchange='NSE', token='26000')
+            symbol_details = self.api.get_quotes(exchange='NSE', token=self.token)
             current_price = float(symbol_details['lp'])
             symbol_name = symbol_details['symname']
 
@@ -259,7 +260,7 @@ class NewStrategy:
             log_sell = ThrottlingLogger(sell_target_order_id, logger_entry)
             
             while not is_order_complete(sell_target_order_id, ORDER_STATUS, log_sell, self.strategy_log_class):
-                if self.exited_strategy_started or self.stop_event.is_set():
+                if self.exited_strategy_started: # or self.stop_event.is_set()
                     break
 
                 # Fetch the Last Traded Price (LTP) for the specified option type
@@ -455,7 +456,7 @@ class NewStrategy:
                 # Fetch the latest traded price (LTP) for the option leg
                 ltp = self.api_websocket.fetch_last_trade_price(option_type, self.LEG_TOKEN)
 
-                if self.exited_strategy_started or self.stop_event.is_set():
+                if self.exited_strategy_started: #or self.stop_event.is_set()
                     break
 
                 # Check if the LTP has reached the stop-loss threshold
@@ -468,7 +469,7 @@ class NewStrategy:
                     selldetails = self.sell_at_limit_price(option_type, buydetails)
 
                     # Check if we need to exit based on stop event
-                    if self.exited_strategy_started or self.stop_event.is_set():
+                    if self.exited_strategy_started: # or self.stop_event.is_set()
                         break
 
                     # Monitor for stop-loss condition on the sell target
@@ -524,7 +525,7 @@ class NewStrategy:
             ).time()
 
             while self.strategy_running:
-                if self.exited_strategy_started or self.stop_event.is_set():
+                if self.exited_strategy_started: # or self.stop_event.is_set()
                     break
 
                 current_time = datetime.now(ist).time()

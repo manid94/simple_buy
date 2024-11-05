@@ -243,7 +243,7 @@ def check_for_stop_loss(option_type, stop_event, selldetails, buydetails, api_we
         buy_back_order_id = buydetails['buy_back_order_id']
         log_sell = ThrottlingLogger(sell_target_order_id, logger_entry)
         while not is_order_complete(sell_target_order_id, ORDER_STATUS, log_sell ,strategy_log_class): #static instead check weather ltp > selltarget_price
-            if exited_strategy_started or stop_event.is_set():
+            if exited_strategy_started: #or stop_event.is_set()
                 break
             ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
             legpnl = calculate_leg_pnl(option_type, 'BUY_BACK', BUY_BACK_LOTS, api_websocket)
@@ -362,7 +362,7 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
         while strategy_running and not leg_entry:
             # print('while check monitor')
             ltp = api_websocket.fetch_last_trade_price(option_type, LEG_TOKEN)  # Fetch LTP for the option leg
-            if exited_strategy_started or stop_event.is_set():
+            if exited_strategy_started: #  or stop_event.is_set()
                 break
             if ltp <= (float(sell_price) * float(SAFETY_STOP_LOSS_PERCENTAGE)):
                 leg_entry = True
@@ -371,7 +371,7 @@ def monitor_leg(option_type, sell_price, strike_price, stop_event, api_websocket
                 buydetails = buy_at_limit_price(option_type, sell_price, api_websocket)
                 selldetails = sell_at_limit_price(option_type, api_websocket, buydetails)
                 print(f"{option_type} ThrottlingLogger... 4 {selldetails}")
-                if exited_strategy_started or stop_event.is_set():
+                if exited_strategy_started : #or stop_event.is_set()
                     break
                 print(f"{option_type} ThrottlingLogger... 5")
                 
@@ -427,7 +427,7 @@ def monitor_strategy(stop_event, api_websocket):
         trace_execution('entered in monitor_strategy')
         end_time = ist_datatime.replace(hour=EXIT_TIME['hours'], minute=EXIT_TIME['minutes'], second=EXIT_TIME['seconds'], microsecond=0).time()
         while strategy_running:
-            if exited_strategy_started or stop_event.is_set():
+            if exited_strategy_started: # or stop_event.is_set()
                 break
             
             current_time = datetime.now(ist).time()
@@ -701,13 +701,14 @@ def start_the_strategy(stop_event):
 
 
 
-        new_data = {
+        nifty_data = {
                         # API & WebSocket initialization
             'api': api,
             'api_websocket':api_websocket,
 
             # Strategy parameters
             'SYMBOL':"NIFTY",
+            'token' : '26000',
             'BUY_BACK_STATIC':BUY_BACK_STATIC,
             'INITIAL_LOTS':INITIAL_LOTS,
             'STRIKE_DIFFERENCE':STRIKE_DIFFERENCE,
@@ -728,9 +729,44 @@ def start_the_strategy(stop_event):
             'BUY_BACK_LOTS':BUY_BACK_LOTS,
         }
 
-        my_strategy = NewStrategy(new_data)
-        my_strategy.run_strategy()
+        bank_nifty_data = {
+            'api': api,
+            'api_websocket':api_websocket,
+
+            # Strategy parameters
+            'SYMBOL':"BANK NIFTY",
+            'token' : '26009',
+            'BUY_BACK_STATIC':BUY_BACK_STATIC,
+            'INITIAL_LOTS':INITIAL_LOTS,
+            'STRIKE_DIFFERENCE':STRIKE_DIFFERENCE,
+            'ONE_LOT_QUANTITY': 15,
+            'TARGET_PROFIT':TARGET_PROFIT,
+            'MAX_LOSS':MAX_LOSS,
+            'MAX_LOSS_PER_LEG':MAX_LOSS_PER_LEG,
+            'SAFETY_STOP_LOSS_PERCENTAGE':SAFETY_STOP_LOSS_PERCENTAGE,
+            'BUY_BACK_PERCENTAGE':BUY_BACK_PERCENTAGE,
+            'SELL_TARGET_PERCENTAGE':SELL_TARGET_PERCENTAGE,
+            'BUY_BACK_LOSS_PERCENTAGE':BUY_BACK_LOSS_PERCENTAGE,
+            'AVAILABLE_MARGIN':AVAILABLE_MARGIN,
+            'ENTRY_TIME':ENTRY_TIME,
+            'EXIT_TIME':EXIT_TIME,
+            'stop_event':stop_event,
+
+            # Dynamic configuration
+            'BUY_BACK_LOTS':BUY_BACK_LOTS,
+        }
+
+        nifty_strategy = NewStrategy(nifty_data)
+        nifty_thread = MyThread(target=nifty_strategy.run_strategy, args=(), daemon=True)
+        nifty_thread.start()
+
+        bank_nifty_strategy = NewStrategy(bank_nifty_data)
+        bank_nifty_thread = MyThread(target=bank_nifty_strategy.run_strategy, args=(), daemon=True)
+        bank_nifty_thread.start()
         #run_strategy(stop_event, api_websocket)
+
+        nifty_thread.join()
+        bank_nifty_thread.join()
         api.close_websocket()
         return True
     except TypeError as e:
