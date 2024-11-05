@@ -24,7 +24,7 @@ def trace_execution(str= 'no data', data=datetime.now(ist).strftime("%Y %m %d - 
 
 
 # Constants Configs
-SYMBOL = 'Nifty bank'
+SYMBOL = 'NiftyBank'
 BUY_BACK_STATIC = True
 INITIAL_LOTS = 1  # Start with 1 lot
 STRIKE_DIFFERENCE = 300
@@ -605,7 +605,7 @@ def exit_strategy(api_websocket, stop_event):
 def run_strategy(stop_event, api_websocket):
     trace_execution('passed run_strategy')
     global strategy_running, sell_price_ce, sell_price_pe, PRICE_DATA, BUY_BACK_LOTS, strategy_log_class
-    strategy_log_class = LocalJsonLogger(trace_execution)
+    strategy_log_class = LocalJsonLogger(trace_execution, SYMBOL)
     start_time = ist_datatime.replace(hour=ENTRY_TIME['hours'], minute=ENTRY_TIME['minutes'], second=ENTRY_TIME['seconds'], microsecond=0).time()
     end_time = ist_datatime.replace(hour=EXIT_TIME['hours'], minute=EXIT_TIME['minutes'], second=EXIT_TIME['seconds'], microsecond=0).time()
     lots = INITIAL_LOTS * ONE_LOT_QUANTITY
@@ -734,7 +734,7 @@ def start_the_strategy(stop_event):
             'api_websocket':api_websocket,
 
             # Strategy parameters
-            'SYMBOL':"BANK NIFTY",
+            'SYMBOL':"BANK_NIFTY",
             'token' : '26009',
             'BUY_BACK_STATIC':BUY_BACK_STATIC,
             'INITIAL_LOTS':INITIAL_LOTS,

@@ -11,12 +11,12 @@ from custom_threading import MyThread
 ist = pytz.timezone('Asia/Kolkata')
 
 class LocalJsonLogger:
-    def __init__(self, trace_execution):
+    def __init__(self, trace_execution,SYMBOL):
         
         self.log_data = []
         self.trace_execution = trace_execution
         trace_execution('entered logger')
-        self.log_file_name = f'logger_files/trading_log_{datetime.now(ist).strftime("%Y%m%d_%H%M%S")}.json'
+        self.log_file_name = f'logger_files/trading_log_{SYMBOL}{datetime.now(ist).strftime("%Y%m%d_%H%M%S")}.json'
         # Ensure the directory exists
         self.ensure_directory_exists()
         trace_execution('logger file created')

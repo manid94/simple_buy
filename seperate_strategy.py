@@ -717,7 +717,7 @@ class NewStrategy:
         self.trace_execution('passed run_strategy')
         
         # Initialize necessary variables
-        self.strategy_log_class = LocalJsonLogger(self.trace_execution)
+        self.strategy_log_class = LocalJsonLogger(self.trace_execution, self.SYMBOL)
         start_time = ist_datatime.replace(
             hour=self.ENTRY_TIME['hours'], 
             minute=self.ENTRY_TIME['minutes'], 
