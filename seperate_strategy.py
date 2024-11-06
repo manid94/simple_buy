@@ -1,5 +1,5 @@
 import time
-from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots
+from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots, get_strike_divident
 from datetime import datetime
 from logger import LocalJsonLogger, ThrottlingLogger, logger_entry
 from custom_threading import MyThread
@@ -85,8 +85,9 @@ class NewStrategy:
             current_price = float(symbol_details['lp'])
             symbol_name = symbol_details['symname']
 
+            divident = float(get_strike_divident(self.SYMBOL))
             # Calculate the ATM strike price rounded to the nearest 100
-            atm_strike = round(current_price / 100) * 100
+            atm_strike = round(current_price / divident) * divident
             print(atm_strike)
 
             # Generate nearest CE and PE option symbols based on ATM strike and strike difference
@@ -745,7 +746,7 @@ class NewStrategy:
             if start_time <= current_time <= end_time:
                 if not self.strategy_running:
                     atm_strike = self.fetch_atm_strike()
-                    self.trace_execution('ATM strike price fetched')
+                    self.trace_execution(f'ATM strike price fetched {atm_strike}')
 
                     # Fetch initial sell prices for CE and PE
                     sell_price_ce = self.api_websocket.fetch_last_trade_price('CE', self.LEG_TOKEN)

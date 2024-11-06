@@ -7,6 +7,12 @@ from logger import ThrottlingLogger
 ist = pytz.timezone('Asia/Kolkata')
 ist_datatime = datetime.now(ist)
 
+
+strike_round = {
+    'NIFTY' : 50,
+    'BANK_NIFTY' : 100
+}
+
 def round_to_nearest_0_05(value):
     return round(float(value) * float(20)) / float(20)
 
@@ -124,3 +130,8 @@ def check_unsold_lots(id, api_websocket):
     fill = float(api_websocket.get_latest_data()[id]['flqty'])
     qty = float(api_websocket.get_latest_data()[id]['qty'])
     return float(qty)-float(fill)
+
+def get_strike_divident(symbol):
+    if symbol in strike_round:
+        return strike_round[symbol]
+    return 100
