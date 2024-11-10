@@ -104,9 +104,21 @@ class OpenWebSocket:
         # Get the token for the given option_type
         leg_token = LEG_TOKEN[option_type]
         
-        # Check if the leg_token exists in SYMBOLDICT
-        if leg_token not in self.SYMBOLDICT:
-            raise KeyError(f"Token {leg_token} not found in SYMBOLDICT {self.SYMBOLDICT}")
+
+        
+
+        start_time = time.time()  # Record the start time
+        while True: # check wheather data created in SYMBOLDICT for 5 seconds before genrating error
+            # Check if the leg_token exists in SYMBOLDICT
+            if leg_token in self.SYMBOLDICT:
+                break
+                
+            # If the 5-second timeout is reached, raise KeyError
+            if time.time() - start_time >= 5:
+                        # Check if the leg_token exists in SYMBOLDICT
+                if leg_token not in self.SYMBOLDICT:
+                    raise KeyError(f"Token {leg_token} not found in SYMBOLDICT {self.SYMBOLDICT}")
+
         
         # Fetch the last trade price
         temp_data = self.SYMBOLDICT[leg_token].get('lp', None)

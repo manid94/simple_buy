@@ -116,7 +116,7 @@ class NewStrategy:
             if subscribeDataPE not in self.subscribedTokens and subscribeDataCE not in self.subscribedTokens:
                 self.api.subscribe([subscribeDataPE, subscribeDataCE])
                 self.subscribedTokens.extend([subscribeDataPE, subscribeDataCE])
-                time.sleep(5)
+                time.sleep(0.1) # wait for 10 milli  second to get data from websocket
 
             self.trace_execution('completed in fetch_atm_strike')
             return atm_strike
@@ -271,6 +271,7 @@ class NewStrategy:
                 # Stop loss check based on per-leg loss limit or LTP percentage threshold
                 avg_buy_price = float(ORDER_STATUS[buy_back_order_id].get('avgprc', 0))
                 if leg_pnl <= -self.MAX_LOSS_PER_LEG or ltp <= avg_buy_price * self.BUY_BACK_LOSS_PERCENTAGE:
+                    self.trace_execution(f"{option_type} stop-loss triggered at {ltp} ")
                     self.trace_execution(f"{option_type} {leg_pnl} reached stop-loss threshold, exiting remaining orders.")
                     self.trace_execution(f"{option_type} {self.PRICE_DATA} ORDER PRICE DETAILS")
 
@@ -285,6 +286,7 @@ class NewStrategy:
                         # Double-check if cancellation was successful
                         current_status = ORDER_STATUS.get(sell_target_order_id, {}).get('status', '').lower()
                         if current_status != 'complete':
+                            self.trace_execution(f"{sell_target_order_id} Error in stop_loss cancel")
                             raise ValueError('Error in cancel Order')
 
                     # Place a market order to sell unsold lots
@@ -753,7 +755,7 @@ class NewStrategy:
                     sell_price_pe = self.api_websocket.fetch_last_trade_price('PE', self.LEG_TOKEN)
                     
                     self.trace_execution(f'Option Prices - CE: {sell_price_ce}, PE: {sell_price_pe}')
-                    self.trace_execution(f'passed OPTION PRICE {atm_strike - self.STRIKE_DIFFERENCE} pe price {sell_price_pe} _ {atm_strike + self.STRIKE_DIFFERENCE} pe price {sell_price_ce}')
+                    self.trace_execution(f'passed OPTION PRICE {atm_strike - self.STRIKE_DIFFERENCE} pe price {sell_price_pe} _ {atm_strike + self.STRIKE_DIFFERENCE} ce price {sell_price_ce}')
 
                     # Calculate lots based on available margin if BUY_BACK_STATIC is not set
                     if not self.BUY_BACK_STATIC:
