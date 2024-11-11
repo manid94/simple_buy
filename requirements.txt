@@ -8,3 +8,4 @@ pytz
 pandas
 deepdiff
 datetime
+boto3
