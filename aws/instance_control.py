@@ -10,10 +10,15 @@ with open('my.json', 'r') as file:
 print(data)
 
 
+kk = data['k'].split('--')
+pp = data['p'].split('--')
+
+
+
 ec2 = boto3.client(
     'ec2',
-    aws_access_key_id=data['k'],
-    aws_secret_access_key=data['p'],
+    aws_access_key_id=kk[1],
+    aws_secret_access_key=pp[1],
     region_name='ap-south-1'  # Set your region
 )
 
