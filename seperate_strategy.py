@@ -303,6 +303,7 @@ class NewStrategy:
 
                 time.sleep(1)  # Polling delay to avoid busy waiting
 
+            self.trace_execution(f"Sell-order order executed successfully for {option_type}: {sell_target_order_id}")
             return sell_target_order_id
 
         except Exception as e:
@@ -429,7 +430,7 @@ class NewStrategy:
             log_buy = ThrottlingLogger(buy_back_order_id, logger_entry)
             while not is_order_complete(buy_back_order_id, ORDER_STATUS, log_buy, self.strategy_log_class):
                 time.sleep(0.25)
-
+            self.trace_execution(f"Buy-back order executed successfully for {option_type}: {buy_back_order_id}")
             # Retrieve and log the average price for the completed order
             buy_back_avg_price = ORDER_STATUS[buy_back_order_id]['avgprc']
             self.PRICE_DATA[f"{option_type}_PRICE_DATA"][f"BUY_BACK_BUY_{option_type}"] = buy_back_avg_price
