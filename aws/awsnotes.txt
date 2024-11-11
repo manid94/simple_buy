@@ -1,0 +1,14 @@
+﻿#kyk,
+--AKIAYSE4NX7OEE45NZR5--
+# acc
+--79pswvK49QweIVvz3Je4A2MJAnO/2f/SkNDeCjaR--
+
+% - remove -- from start and end
+
+# User name - deepak,
+
+Paswr - 6383685754&pP,
+
+
+Console sign-in URL
+,,https://588738576348.signin.aws.amazon.com/console
