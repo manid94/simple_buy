@@ -19,7 +19,16 @@ Reattach to the screen session (if you want to see your script's progress later)
 
 
 
-improvements if cancel order success then only place market order
+improvements 
+   if cancel order success then only place market order
+   in exit_order partial fulfillment orders need to handled
+   json generating html need to create 
+   dynamic quantity selection based on flag and margin need to implement
+   trail profit concept need to create in pnl.
+   git pull need to be done before running the code 
+
+
+
 
 
 move print and logging in utils function
