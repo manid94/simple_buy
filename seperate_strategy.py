@@ -126,61 +126,7 @@ class NewStrategy:
             return None
 
 
-    # Calculate PNL based on current leg status
-    def calculate_leg_pnl(self, option_type, type, lots):
-        try:
-            # Check if PRICE_DATA and the required subkey exist
-            price_data_key = option_type + '_PRICE_DATA'
-            if price_data_key not in self.PRICE_DATA:
-                self.trace_execution(f"Error: {price_data_key} not found in PRICE_DATA.")
-                raise ValueError(f'Error on calculate_leg_pnl {price_data_key} not found in PRICE_DATA.')
-            
-            # Get the PRICE_DATAS for the given option_type
-            PRICE_DATAS = self.PRICE_DATA[price_data_key]
-            
-            # Create the keys for sell and buy nodes
-            node_sell = type + '_SELL_' + option_type
-            node_buy = type + '_BUY_' + option_type
-
-            # Initialize prices
-            sold_price_or_ltp_price = 0
-            bought_price_or_ltp_price = 0
-
-            # Debug print statements to show keys and data
-            # print(f"node_sell: {node_sell}")
-            # print(f"node_buy: {node_buy}")
-            # print("PRICE_DATAS:", PRICE_DATAS)
-
-            # Check if the nodes exist in PRICE_DATAS before accessing
-            last_traded_price = self.api_websocket.fetch_last_trade_price(option_type, self.LEG_TOKEN)
-            if node_sell in PRICE_DATAS:
-                # Use the stored price or fetch the last traded price if it's zero
-                sold_price_or_ltp_price = float(PRICE_DATAS[node_sell])
-                if sold_price_or_ltp_price == 0:
-                    sold_price_or_ltp_price = last_traded_price
-            else:
-                self.trace_execution(f"Error: {node_sell} not found in PRICE_DATAS.")
-            
-            if node_buy in PRICE_DATAS:
-                bought_price_or_ltp_price = PRICE_DATAS[node_buy]
-                if bought_price_or_ltp_price == 0:
-                    bought_price_or_ltp_price = last_traded_price
-            else:
-                self.trace_execution(f"Error: {node_buy} not found in PRICE_DATAS.")
-            
-            difference = float(sold_price_or_ltp_price) - float(bought_price_or_ltp_price)
-            
-            pnl = difference * lots * self.ONE_LOT_QUANTITY
-            return float(pnl)
-        except Exception as e:
-            if not self.exited_strategy_completed:
-                self.exit_strategy()
-                self.trace_execution(f'Error in calculate_leg_pnl: {e}')
-            else:
-                self.trace_execution(f'calculate_leg_pnl Error but already exited: {e}')
-            
-
-        
+    # Calculate PNL based on current leg status        
     # Function to calculate total PNL
     def calculate_leg_pnl(self, option_type, trade_type, lots):
         try:

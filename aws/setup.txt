@@ -15,7 +15,7 @@ extend event time out
 
 update IAM user roles also custom roles
 
-control instance policy
+control instance policy  -- JSON
   {
       "Version": "2012-10-17",
       "Statement": [
