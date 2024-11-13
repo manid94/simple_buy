@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive JSON Generator for Strategy Config</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f7f9fc;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            margin-top: 5px;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f4f4f4;
+            border: 1px solid #ddd;
+            white-space: pre-wrap;
+            font-family: monospace;
+            position: relative;
+        }
+        #copyButton {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        #copyButton:hover {
+            background-color: #0056b3;
+        }
+        #copyMessage {
+            display: none;
+            color: green;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Interactive JSON Generator for Strategy Config</h2>
+    
+    <div class="form-group">
+        <label for="initialLots">Initial Lots</label>
+        <input type="number" id="initialLots" value="1" min="1" oninput="updateJSON()">
+    </div>
+    
+    <div class="form-group">
+        <label for="targetProfit">Target Profit</label>
+        <input type="number" id="targetProfit" value="5000" min="0" oninput="updateJSON()">
+    </div>
+
+    <div class="form-group">
+        <label for="maxLoss">Max Loss</label>
+        <input type="number" id="maxLoss" value="2000" min="0" oninput="updateJSON()">
+    </div>
+
+    <div class="form-group">
+        <label for="entryTime">Entry Time</label>
+        <input type="time" id="entryTime" value="09:30" oninput="updateJSON()">
+    </div>
+
+    <div class="form-group">
+        <label for="exitTime">Exit Time</label>
+        <input type="time" id="exitTime" value="15:30" oninput="updateJSON()">
+    </div>
+
+    <div class="form-group">
+        <label for="enableTrailing">Enable Trailing</label>
+        <input type="checkbox" id="enableTrailing" checked onchange="updateJSON()">
+    </div>
+
+    <div class="form-group">
+        <label>Trail Configuration</label>
+        <div class="slider-label">
+            <span>Profit Trail Start at</span>
+            <span id="profitTrailValue">1600</span>
+        </div>
+        <input type="range" id="profitTrailStartAt" min="0" max="5000" step="100" value="1600" oninput="updateJSON()">
+    </div>
+
+    <h3>Generated JSON:</h3>
+    <pre id="output">{ }</pre>
+    <button id="copyButton" onclick="copyJSON()">Copy JSON</button>
+    <div id="copyMessage">JSON copied to clipboard!</div>
+</div>
+
+<script>
+    function updateJSON() {
+        // Retrieve values from input fields
+        const initialLots = parseInt(document.getElementById("initialLots").value, 10);
+        const targetProfit = parseInt(document.getElementById("targetProfit").value, 10);
+        const maxLoss = parseInt(document.getElementById("maxLoss").value, 10);
+        const entryTime = document.getElementById("entryTime").value;
+        const exitTime = document.getElementById("exitTime").value;
+        const enableTrailing = document.getElementById("enableTrailing").checked;
+        const profitTrailStartAt = parseInt(document.getElementById("profitTrailStartAt").value, 10);
+
+        // Update slider display value
+        document.getElementById("profitTrailValue").textContent = profitTrailStartAt;
+
+        // Define the JSON structure
+        const config = {
+            'SYMBOL': "BANK_NIFTY",
+            'token': '26009',
+            'INITIAL_LOTS': initialLots,
+            'TARGET_PROFIT': targetProfit,
+            'MAX_LOSS': maxLoss,
+            'ENTRY_TIME': entryTime,
+            'EXIT_TIME': exitTime,
+            'ENABLE_TRAILING': enableTrailing,
+            'Trail_config': enableTrailing ? {
+                'profit_trail_start_at': profitTrailStartAt,
+                'profit_lock_after_start': 300,
+                'on_profit_increase_from_trail': 100,
+                'increase_profit_lock_by': 95
+            } : null
+        };
+
+        // Display the generated JSON
+        document.getElementById("output").textContent = JSON.stringify(config, null, 4);
+    }
+
+    function copyJSON() {
+        const jsonText = document.getElementById("output").textContent;
+        navigator.clipboard.writeText(jsonText).then(() => {
+            const copyMessage = document.getElementById("copyMessage");
+            copyMessage.style.display = "block";
+            setTimeout(() => {
+                copyMessage.style.display = "none";
+            }, 2000);
+        });
+    }
+
+    // Initial JSON load
+    updateJSON();
+</script>
+
+</body>
+</html>
