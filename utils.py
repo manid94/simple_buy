@@ -20,6 +20,7 @@ def round_to_nearest_0_05(value):
 # Function to place sell orders for both legs
 def place_market_order(api, LEG_TOKEN, option_type, type, lots, leg_type):
     # tsym = SYMBOLDICT[LEG_TOKEN[option_type]]['ts']
+    """place_market_order."""
     tsym = LEG_TOKEN[option_type+'_tsym']
     print('inside place_limit_order')
     order_responce = api.place_order(buy_or_sell=type, product_type='I',

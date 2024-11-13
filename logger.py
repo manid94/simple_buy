@@ -53,6 +53,7 @@ class LocalJsonLogger:
                       
     def generate_log_entry(self, datas):
         # Extracting individual values from the datas dictionary
+        """Generate a new log entry with random data (simulating a trading strategy)."""
         tsymbol = datas.get("symbol")
         orderno = datas.get("order_number")
         direction = datas.get("direction")
@@ -65,7 +66,6 @@ class LocalJsonLogger:
         status = datas.get("status")
     
         # self.trace_execution(f'inside generate_log_entry {datas}')
-        # """Generate a new log entry with random data (simulating a trading strategy)."""
         return {
             "time": str(datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")),
             "tsymbol": str(tsymbol),
@@ -107,6 +107,7 @@ class LocalJsonLogger:
 
 
 class ThrottlingLogger:
+    """ThrottlingLogger"""
     def __init__(self, orderid, logger):
         self.orderno = orderid
         self.logger = logger
