@@ -35,6 +35,7 @@ def place_market_order(api, LEG_TOKEN, option_type, type, lots, leg_type):
 
 
 def place_limit_order(api, LEG_TOKEN, option_type, type, lots, limit_price, leg_type):
+    
     # tsym = SYMBOLDICT[LEG_TOKEN[option_type]]['ts']
     print('inside place_limit_order')
     tsym = LEG_TOKEN[option_type+'_tsym']
