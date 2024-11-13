@@ -65,7 +65,7 @@ class LocalJsonLogger:
         status = datas.get("status")
     
         # self.trace_execution(f'inside generate_log_entry {datas}')
-        """Generate a new log entry with random data (simulating a trading strategy)."""
+        # """Generate a new log entry with random data (simulating a trading strategy)."""
         return {
             "time": str(datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")),
             "tsymbol": str(tsymbol),
