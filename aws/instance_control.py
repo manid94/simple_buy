@@ -1,6 +1,6 @@
-import boto3
 import time
 import json
+import boto3
 
 # Open the JSON file and load the data
 with open('my.json', 'r') as file:
