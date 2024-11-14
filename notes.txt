@@ -27,6 +27,8 @@ improvements
    trail profit concept need to create in pnl.
    git pull need to be done before running the code 
    check weather more selling is happening to wait randomly 
+    add try except block in all classes.
+
 
 
 
