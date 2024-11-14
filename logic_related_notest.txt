@@ -1,3 +1,7 @@
 basic strategy must look like
 
 minutes+ percentage+stike difference percentage+ profit % =< 50
+
+
+
+check average trade quantity 
