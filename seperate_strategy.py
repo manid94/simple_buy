@@ -1,5 +1,5 @@
 import time
-from utils.utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots, get_strike_divident
+from utils.utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots, get_strike_divident, get_symbol_lot_qty
 from datetime import datetime
 from logger import LocalJsonLogger, ThrottlingLogger, logger_entry
 from utils.custom_threading import MyThread
