@@ -6,7 +6,7 @@ from datetime import datetime
 from api_websocket import OpenWebSocket
 from utils.custom_threading import MyThread
 from seperate_strategy import NewStrategy
-from exit_all import exit_all_positions
+from utils.exit_all import exit_all_positions
 
 
 
