@@ -1,10 +1,10 @@
 import time
-from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots, get_strike_divident
+from utils.utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots, get_strike_divident
 from datetime import datetime
 from logger import LocalJsonLogger, ThrottlingLogger, logger_entry
-from custom_threading import MyThread
+from utils.custom_threading import MyThread
 from strategy_log_files.strategy_log import createLogger
-from trailing_strategy import  Tralling
+from utils.trailing_strategy import  Tralling
 
 
 # flag to tell us if the api_websocket is open

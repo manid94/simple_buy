@@ -1,10 +1,10 @@
 import time
 import logging
-from utils import ist
+from utils.utils import ist
 from brokerapi import getshoonyatradeapi
 from datetime import datetime
 from api_websocket import OpenWebSocket
-from custom_threading import MyThread
+from utils.custom_threading import MyThread
 from seperate_strategy import NewStrategy
 from exit_all import exit_all_positions
 

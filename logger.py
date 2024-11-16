@@ -6,7 +6,7 @@ import threading
 import copy
 from datetime import datetime
 from deepdiff import DeepDiff
-from custom_threading import MyThread
+from utils.custom_threading import MyThread
 
 ist = pytz.timezone('Asia/Kolkata')
 

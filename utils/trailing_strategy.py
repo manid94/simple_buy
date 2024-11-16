@@ -13,12 +13,12 @@ class Tralling:
         if pnl >= self.PROFIT_TRAIL:
             self.TRALING_STARTED = True
 
-        if TRALING_STARTED:
+        if self.TRALING_STARTED:
             if pnl >= (self.PROFIT_TRAIL + self.PROFIT_TRAIL_UPDATE):
                 self.update_profit_trail()
             if pnl <= self.LOCK_PROFIT:
                 self.exit()
         
-    def update_profit_trail():
+    def update_profit_trail(self):
         self.PROFIT_TRAIL = self.PROFIT_TRAIL + self.PROFIT_TRAIL_UPDATE
         self.LOCK_PROFIT = self.LOCK_PROFIT + self.INCREASE_PROFIT_LOCK

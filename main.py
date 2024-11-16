@@ -2,7 +2,7 @@ import threading
 import time
 from datetime import datetime
 from strategy import start_the_strategy
-from utils import ist
+from utils.utils import ist
 
 # Create an Event object to signal the thread
 
