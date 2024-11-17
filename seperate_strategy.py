@@ -1,9 +1,10 @@
 import time
-from utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots, get_strike_divident
+from utils.utils import ist, round_to_nearest_0_05, place_limit_order, place_market_order, place_market_exit, is_order_complete, wait_for_orders_to_complete, check_unsold_lots, get_strike_divident, get_symbol_lot_qty
 from datetime import datetime
 from logger import LocalJsonLogger, ThrottlingLogger, logger_entry
-from custom_threading import MyThread
+from utils.custom_threading import MyThread
 from strategy_log_files.strategy_log import createLogger
+from utils.trailing_strategy import  Tralling
 
 
 # flag to tell us if the api_websocket is open
@@ -27,7 +28,6 @@ class NewStrategy:
         self.BUY_BACK_STATIC = datas['BUY_BACK_STATIC']
         self.INITIAL_LOTS = datas['INITIAL_LOTS']
         self.STRIKE_DIFFERENCE = datas['STRIKE_DIFFERENCE']
-        self.ONE_LOT_QUANTITY = datas['ONE_LOT_QUANTITY']
         self.TARGET_PROFIT = datas['TARGET_PROFIT']
         self.MAX_LOSS = datas['MAX_LOSS']
         self.MAX_LOSS_PER_LEG = datas['MAX_LOSS_PER_LEG']
@@ -38,15 +38,21 @@ class NewStrategy:
         self.AVAILABLE_MARGIN = datas['AVAILABLE_MARGIN']
         self.ENTRY_TIME = datas['ENTRY_TIME']
         self.EXIT_TIME = datas['EXIT_TIME']
-        self.stop_event = datas['stop_event']
+        #self.stop_event = datas['stop_event']
 
-        # Dynamic configuration
+        # Dynamic configuration will update in run strategy
         self.BUY_BACK_LOTS = datas['BUY_BACK_LOTS']
+        
+        #Trailing stop Loss
+        self.ENABLE_TRAILING = datas['ENABLE_TRAILING']
+        if datas['ENABLE_TRAILING']:
+            self.trail = Tralling(datas['Trail_config'], self.exit_strategy)
 
         # Strategy level variables
         self.LEG_TOKEN = {}
         self.CURRENT_STRATEGY_ORDERS = []
         self.subscribedTokens = []
+        self.ONE_LOT_QUANTITY = get_symbol_lot_qty(datas['SYMBOL'])
 
         # Price data structure to track CE and PE prices
         self.PRICE_DATA = {
@@ -177,13 +183,15 @@ class NewStrategy:
             # Sum up the PnL values
             total_pnl = ce_pnl + pe_pnl + ce_entry_pnl + pe_entry_pnl + ce_re_entry_pnl + pe_re_entry_pnl
 
+            if self.ENABLE_TRAILING:
+                self.trail.trailing(total_pnl)
+
             # Optional logging of PnL components if log is True
             if log:
-                self.trace_execution(
-                    f'Total PnL calculation breakdown: ce_pnl={ce_pnl}, pe_pnl={pe_pnl}, '
-                    f'ce_entry_pnl={ce_entry_pnl}, pe_entry_pnl={pe_entry_pnl}, '
-                    f'ce_re_entry_pnl={ce_re_entry_pnl}, pe_re_entry_pnl={pe_re_entry_pnl}'
-                )
+                self.trace_execution(f'ce_entry_pnl={ce_entry_pnl}, pe_entry_pnl={pe_entry_pnl}')
+                self.trace_execution(f'BuyBack PnL calculation breakdown: ce_pnl={ce_pnl}, pe_pnl={pe_pnl}')
+                self.trace_execution(f'ce_re_entry_pnl={ce_re_entry_pnl}, pe_re_entry_pnl={pe_re_entry_pnl}')
+            
             return total_pnl
 
         except Exception as e:

@@ -31,6 +31,12 @@ control instance policy  -- JSON
   }
 
 
+
+  use winnscp or putty
+
+  enable elastic ip and assign it to the instance
+
+
 AmazonDMSCloudWatchLogsRole
 AWS managed
 1
@@ -1924,3 +1930,50 @@ After testing, revert to your original schedule.
 Enable AWS CloudTrail to capture more detailed logs of actions in your account, including EventBridge rule invocations.
 In CloudTrail, search for events related to Invoke actions to check if EventBridge is trying to invoke your Lambda function and if any errors are reported.
 Following these steps should help identify and resolve why your EventBridge Scheduler isn’t working as expected. Let me know if you find specific errors or need more assistance!
+
+
+
+
+1. Launch an EC2 Instance
+Follow the steps outlined earlier to launch an EC2 instance:
+
+Log in to AWS and navigate to EC2.
+Click Launch Instance and configure the instance as needed (AMI, instance type, storage, etc.).
+Once the instance is launched, you’ll assign a static IP.
+2. Allocate an Elastic IP Address
+An Elastic IP in AWS is a static IPv4 address that can be assigned to an instance.
+
+Go to the EC2 Dashboard:
+In the AWS Management Console, navigate to EC2.
+Allocate an Elastic IP:
+On the left menu, click Elastic IPs under "Network & Security."
+Click Allocate Elastic IP Address.
+Choose the default settings and click Allocate.
+Note the Elastic IP Address:
+After allocation, you’ll see the static IP in the list.
+3. Associate the Elastic IP with the EC2 Instance
+Select the Elastic IP:
+Check the box next to your allocated Elastic IP.
+Click "Actions" → "Associate Elastic IP Address":
+Choose the instance you launched earlier from the dropdown.
+Confirm and click Associate.
+4. Test the Static IP
+Copy the Elastic IP.
+Open a browser and navigate to http://<Elastic_IP>.
+If you’ve set up a web server (like Apache or Nginx), you should see the default web page.
+5. Update Security Group Rules
+To ensure the server is accessible:
+
+Go to Security Groups:
+In the EC2 dashboard, click on Security Groups under "Network & Security."
+Edit Inbound Rules:
+Add rules to allow traffic:
+HTTP (port 80): Allows web traffic.
+HTTPS (port 443): Allows secure web traffic.
+SSH (port 22): Allows remote access.
+6. Persistent Elastic IP
+Elastic IPs remain static as long as they are associated with an instance. However:
+
+If you stop the instance, the IP remains linked.
+If you terminate the instance, the IP is released unless reassigned.
+To avoid releasing the Elastic IP, keep it associated or reassign it to another instance.

@@ -13,6 +13,12 @@ strike_round = {
     'BANK_NIFTY' : 100
 }
 
+one_lot_quantity = {
+    'NIFTY' : 25,
+    'BANK_NIFTY' : 15
+}
+
+
 def round_to_nearest_0_05(value):
     return round(float(value) * float(20)) / float(20)
 
@@ -136,3 +142,8 @@ def get_strike_divident(symbol):
     if symbol in strike_round:
         return strike_round[symbol]
     return 100
+
+def get_symbol_lot_qty(symbol):
+    if symbol in one_lot_quantity:
+        return one_lot_quantity[symbol]
+    return 15

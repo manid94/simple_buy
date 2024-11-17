@@ -1,0 +1,45 @@
+Order States and Report Types
+Possible Values for Order States are as follows
+
+PENDING :- The order has been submitted but is awaiting further processing.
+
+CANCELED :- The order has been canceled by the trader before being executed.
+
+OPEN:- The order is active and waiting to be matched with a counterparty.
+
+REJECTED:- The order has been declined due to certain criteria not being met.
+
+COMPLETE:- The order has been successfully executed and completed.
+
+TRIGGER_PENDING:- A specific condition must be met before the order can become active.
+
+INVALID_STATUS_TYPE:- The provided order status is not recognized or valid.
+
+The Orders will have a request status or report type for modify/cancel the possible values are as follows
+NewAck :- acknowledgement that a new order request has been received.
+
+ModAck :- acknowledgement that a modification request for an existing order has been received.
+
+CanAck :- acknowledgement that a request to cancel an order has been received.
+
+PendingNew :- The request to place a new order is pending further review.
+
+PendingReplace :- The request to modify an existing order is pending further review.
+
+PendingCancel :- The request to cancel an order is pending further review.
+
+New :- Confirmation that a new order has been successfully placed.
+
+Replaced :- confirmation that an existing order has been successfully modified.
+
+Canceled :- confirmation that an order has been successfully canceled.
+
+Fill :- notification that an order has been fully or partially executed.
+
+Rejected :- notification that an order has been rejected and not executed.
+
+ReplaceRejected :- Notification that a request to modify an order has been rejected.
+
+CancelRejected :- Notification that a request to cancel an order has been rejected.
+
+INVALID_REPORT_TYPE :- The provided report type for modification/cancellation is not recognized or valid.

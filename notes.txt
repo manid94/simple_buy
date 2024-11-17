@@ -22,9 +22,12 @@ Reattach to the screen session (if you want to see your script's progress later)
 improvements 
    if cancel order success then only place market order
    in exit_order partial fulfillment orders need to handled
-   json generating html need to create 
-   dynamic quantity selection based on flag and margin need to implement
-   trail profit concept need to create in pnl.
+   json generating html need to create  - optimize
+
+   dynamic quantity selection based on flag and margin need to implement - test
+
+   trail profit concept need to create in pnl. - test
+   trail loss concept unknown - suggestion
    git pull need to be done before running the code 
    check weather more selling is happening to wait randomly 
    add try except block in all classes.

@@ -1,12 +1,12 @@
 import time
 import logging
-from utils import ist
+from utils.utils import ist
 from brokerapi import getshoonyatradeapi
 from datetime import datetime
 from api_websocket import OpenWebSocket
-from custom_threading import MyThread
+from utils.custom_threading import MyThread
 from seperate_strategy import NewStrategy
-from exit_all import exit_all_positions
+from utils.exit_all import exit_all_positions
 
 
 
@@ -122,7 +122,6 @@ def start_the_strategy(stop_event):
             'BUY_BACK_STATIC':BUY_BACK_STATIC,
             'INITIAL_LOTS':INITIAL_LOTS,
             'STRIKE_DIFFERENCE':STRIKE_DIFFERENCE,
-            'ONE_LOT_QUANTITY': 25,
             'TARGET_PROFIT':TARGET_PROFIT,
             'MAX_LOSS':MAX_LOSS,
             'MAX_LOSS_PER_LEG':MAX_LOSS_PER_LEG,
@@ -133,10 +132,18 @@ def start_the_strategy(stop_event):
             'AVAILABLE_MARGIN':AVAILABLE_MARGIN,
             'ENTRY_TIME':ENTRY_TIME,
             'EXIT_TIME':EXIT_TIME,
-            'stop_event':stop_event,
+            #'stop_event':stop_event,
 
             # Dynamic configuration
             'BUY_BACK_LOTS':BUY_BACK_LOTS,
+            # Trail Profit and stoploss
+            'ENABLE_TRAILING': True,
+            'Trail_config' : {
+                'profit_trail_start_at' : 1600,
+                'profit_lock_after_start': 300,
+                'on_profit_increase_from_trail': 100,
+                'increase_profit_lock_by': 95
+            }
         }
 
         bank_nifty_data = {
@@ -149,7 +156,6 @@ def start_the_strategy(stop_event):
             'BUY_BACK_STATIC':BUY_BACK_STATIC,
             'INITIAL_LOTS':INITIAL_LOTS,
             'STRIKE_DIFFERENCE':STRIKE_DIFFERENCE,
-            'ONE_LOT_QUANTITY': 15,
             'TARGET_PROFIT':TARGET_PROFIT,
             'MAX_LOSS':MAX_LOSS,
             'MAX_LOSS_PER_LEG':MAX_LOSS_PER_LEG,
@@ -160,10 +166,18 @@ def start_the_strategy(stop_event):
             'AVAILABLE_MARGIN':AVAILABLE_MARGIN,
             'ENTRY_TIME':ENTRY_TIME,
             'EXIT_TIME':EXIT_TIME,
-            'stop_event':stop_event,
+            #'stop_event':stop_event,
 
             # Dynamic configuration
             'BUY_BACK_LOTS':BUY_BACK_LOTS,
+            # Trail Profit and stoploss
+            'ENABLE_TRAILING': True,
+            'Trail_config' : {
+                'profit_trail_start_at' : 1600,
+                'profit_lock_after_start': 300,
+                'on_profit_increase_from_trail': 100,
+                'increase_profit_lock_by': 95
+            }
         }
 
         nifty_strategy = NewStrategy(nifty_data)

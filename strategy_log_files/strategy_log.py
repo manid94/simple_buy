@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 import os
 import pytz
-from utils import ist
+from utils.utils import ist
 
 log_directory = 'strategy_log_files'
 IST = pytz.timezone('Asia/Kolkata')
