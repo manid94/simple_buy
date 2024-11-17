@@ -38,7 +38,7 @@ class NewStrategy:
         self.AVAILABLE_MARGIN = datas['AVAILABLE_MARGIN']
         self.ENTRY_TIME = datas['ENTRY_TIME']
         self.EXIT_TIME = datas['EXIT_TIME']
-        self.stop_event = datas['stop_event']
+        #self.stop_event = datas['stop_event']
 
         # Dynamic configuration will update in run strategy
         self.BUY_BACK_LOTS = datas['BUY_BACK_LOTS']
