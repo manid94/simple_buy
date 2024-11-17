@@ -12,7 +12,7 @@
     <h2>Interactive JSON Generator for Strategy Config</h2>
     <div class="form-group">
         <label for="symbols">Initial Lots</label>
-        <select id="symbols" oninput="updateJSON()">
+        <select id="symbols" oninput="symbolsChange()">
             <option value="bank">Bank Nifty</option>
             <option value="nifty">Nifty</option>
         </select>
@@ -21,6 +21,45 @@
     <div class="form-group">
         <label for="initialLots">Initial Lots</label>
         <input type="number" id="initialLots" value="1" min="1" oninput="updateJSON()">
+    </div>
+
+    <div class="form-group">
+        <div class="slider-label">
+            <label>strike difference from atm</label>
+            <span id="strikeDiffValue">200</span>
+        </div>
+        <input type="range" id="strikeDiff" min="0" max="2500" step="100" value="200" oninput="updateJSON()">
+    </div>
+
+    <div class="form-group">
+        <label for="staticBuyBack">STATIC  BUY BACK(STOP DYNAMIC BUY BACK BASED on MARGIN)</label>
+        <input type="checkbox" id="staticBuyBack" checked onchange="updateJSON()">
+    </div>
+
+
+
+    <div class="form-group">
+        <div class="slider-label">
+            <label>safetyStopLossPercentage</label>
+            <span id="safetyStopLossPercentageValue">1</span>
+        </div>
+        <input type="range" id="safetyStopLossPercentage" min="0" max="5" step="1" value="1" oninput="updateJSON()">
+    </div>
+
+    <div class="form-group">
+        <div class="slider-label">
+            <label>buy back entry fall percentage</label>
+            <span id="buyAtPercentageValue">18</span>
+        </div>
+        <input type="range" id="buyAtPercentage" min="5" max="50" step="1" value="18" oninput="updateJSON()">
+    </div>
+    
+    <div class="form-group">
+        <div class="slider-label">
+            <label>sell profit percentage after buyback</label>
+            <span id="sellProfitPercentageValue">2</span>
+        </div>
+        <input type="range" id="sellProfitPercentage" min="0" max="10" step="1" value="2" oninput="updateJSON()">
     </div>
     
     <div class="form-group">
@@ -35,12 +74,12 @@
 
     <div class="form-group">
         <label for="entryTime">Entry Time</label>
-        <input type="time" id="entryTime" value="09:30" oninput="updateJSON()">
+        <input type="time" id="entryTime" class="form-control" value="09:22:00" min="09:15" max="14:20" step="1" oninput="updateJSON()">
     </div>
 
     <div class="form-group">
         <label for="exitTime">Exit Time</label>
-        <input type="time" id="exitTime" value="15:30" oninput="updateJSON()">
+        <input type="time" id="exitTime" class="form-control" value="09:22:00" min="10:30" max="15:20" step="1" oninput="updateJSON()">
     </div>
 
     <div class="form-group">
@@ -79,76 +118,6 @@
     <button id="copyButton" onclick="copyJSON()">Copy JSON</button>
     <div id="copyMessage">JSON copied to clipboard!</div>
 </div>
-
-<script>
-    function updateJSON() {
-        // Retrieve values from input fields
-        const symbols = document.getElementById("symbols").value;
-
-        const [SYMBOL, token] = getSymbolDetails(symbols);
-
-        const initialLots = parseInt(document.getElementById("initialLots").value, 10);
-        const targetProfit = parseInt(document.getElementById("targetProfit").value, 10);
-        const maxLoss = parseInt(document.getElementById("maxLoss").value, 10);
-        const entryTime = document.getElementById("entryTime").value;
-        const exitTime = document.getElementById("exitTime").value;
-        const enableTrailing = document.getElementById("enableTrailing").checked;
-        const profitTrailStartAt = parseInt(document.getElementById("profitTrailStartAt").value, 10);
-        const profitLockAt = parseInt(document.getElementById("profitLockAt").value, 10);
-        const profitTrailIncreaseAt = parseInt(document.getElementById("profitTrailIncreaseAt").value, 10);
-        const profitLockIncreaseAt = parseInt(document.getElementById("profitLockIncreaseAt").value, 10);
-        // Update slider display value
-        document.getElementById("profitTrailValue").textContent = profitTrailStartAt;
-        document.getElementById("profitLockValue").textContent = profitLockAt;
-        document.getElementById("profitTrailIncreaseValue").textContent = profitTrailIncreaseAt;
-        document.getElementById("profitLockIncreaseValue").textContent = profitLockIncreaseAt;
-
-        // Define the JSON structure
-        const config = {
-            'SYMBOL': SYMBOL,
-            'token': token,
-            'INITIAL_LOTS': initialLots,
-            'TARGET_PROFIT': targetProfit,
-            'MAX_LOSS': maxLoss,
-            'ENTRY_TIME': entryTime,
-            'EXIT_TIME': exitTime,
-            'ENABLE_TRAILING': enableTrailing,
-            'Trail_config': enableTrailing ? {
-                'profit_trail_start_at': profitTrailStartAt,
-                'profit_lock_after_start': profitLockAt,
-                'on_profit_increase_from_trail': profitTrailIncreaseAt,
-                'increase_profit_lock_by': profitLockIncreaseAt
-            } : null
-        };
-
-        // Display the generated JSON
-        document.getElementById("output").textContent = JSON.stringify(config, null, 4);
-    }
-
-    function copyJSON() {
-        const jsonText = document.getElementById("output").textContent;
-        navigator.clipboard.writeText(jsonText).then(() => {
-            const copyMessage = document.getElementById("copyMessage");
-            copyMessage.style.display = "block";
-            setTimeout(() => {
-                copyMessage.style.display = "none";
-            }, 2000);
-        });
-    }
-    function getSymbolDetails(symbols) {
-        const datas = {
-            bank : [
-                "BANK_NIFTY", '26009'
-        ],
-            nifty : [
-                "NIFTY", '26000'
-        ]
-        }
-        return datas[symbols]
-    }
-    // Initial JSON load
-    updateJSON();
-</script>
-
+<script src="generate_json.js"></script>
 </body>
 </html>
