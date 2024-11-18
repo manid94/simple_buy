@@ -24,7 +24,7 @@ def trace_execution(str= 'no data', data=datetime.now(ist).strftime("%Y %m %d - 
 SYMBOL = 'NiftyBank'
 BUY_BACK_STATIC = True
 INITIAL_LOTS = 1  # Start with 1 lot
-STRIKE_DIFFERENCE = 300
+STRIKE_DIFFERENCE = 0
 ONE_LOT_QUANTITY = 15  # Number of units per lot in Bank Nifty
 TARGET_PROFIT = 500
 MAX_LOSS = 300
@@ -36,7 +36,7 @@ BUY_BACK_LOSS_PERCENTAGE = 0.90
 AVAILABLE_MARGIN = 5000
 ENTRY_TIME = {
     'hours': 9,
-    'minutes': 33,
+    'minutes': 22,
     'seconds': 0
 }
 EXIT_TIME = {
@@ -155,7 +155,7 @@ def start_the_strategy(stop_event):
             'token' : '26009',
             'BUY_BACK_STATIC':BUY_BACK_STATIC,
             'INITIAL_LOTS':INITIAL_LOTS,
-            'STRIKE_DIFFERENCE':STRIKE_DIFFERENCE,
+            'STRIKE_DIFFERENCE': 800,
             'TARGET_PROFIT':TARGET_PROFIT,
             'MAX_LOSS':MAX_LOSS,
             'MAX_LOSS_PER_LEG':MAX_LOSS_PER_LEG,
