@@ -647,7 +647,7 @@ class NewStrategy:
             
             # Set strategy exit completion flag
             self.exited_strategy_completed = True
-            self.api.unsubscribe(self.subscribedTokens)
+            # self.api.unsubscribe(self.subscribedTokens) because on many other strategies may run concurrently for same leg
             # Signal any waiting threads or processes
             # if self.stop_event:
             #     self.stop_event.set()
