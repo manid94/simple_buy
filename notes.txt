@@ -33,6 +33,14 @@ improvements
    add try except block in all classes.
 
 
+   
+
+mandatory
+ trail profit concept need to create in pnl. - test
+ exit all  logic need to test - test
+ dynamic quantity selection based on flag and margin need to implement - test
+
+
 
 
 
