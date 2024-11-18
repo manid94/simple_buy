@@ -47,7 +47,7 @@ EXIT_TIME = {
 }
 
 # DYNAMIC CONFIG
-BUY_BACK_LOTS = 1
+BUY_BACK_LOTS = 3
 
 
 
@@ -155,7 +155,7 @@ def start_the_strategy(stop_event):
             'token' : '26009',
             'BUY_BACK_STATIC':BUY_BACK_STATIC,
             'INITIAL_LOTS':INITIAL_LOTS,
-            'STRIKE_DIFFERENCE': 800,
+            'STRIKE_DIFFERENCE': 1000,
             'TARGET_PROFIT':TARGET_PROFIT,
             'MAX_LOSS':MAX_LOSS,
             'MAX_LOSS_PER_LEG':MAX_LOSS_PER_LEG,
