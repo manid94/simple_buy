@@ -1,7 +1,7 @@
 import time
 import logging
 from utils.utils import ist
-from brokerapi import getshoonyatradeapi
+from utils.brokerapi import getshoonyatradeapi
 from datetime import datetime
 from api_websocket import OpenWebSocket
 from utils.custom_threading import MyThread

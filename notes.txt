@@ -38,15 +38,20 @@ improvements
 
 mandatory
  trail profit concept need to create in pnl. - test
- exit all  logic need to test - test
  dynamic quantity selection based on flag and margin need to implement - test
+ exit all  logic need to test - testing 
+
+    exit all on buy - working fine.
+        need to test sell exit 
+        and reconfirm sell market order
+        log details
 
 
 
 
 
 
-move print and logging in utils function
+move print and logging in utils function - almost done
 
 
 
