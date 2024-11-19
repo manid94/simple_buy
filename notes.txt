@@ -52,6 +52,8 @@ mandatory
                     if leg_type == 'start' and qty == 0:  # Skip quantity for initial unexecuted orders
                         continue
 
+    enhance the code to accept quantity more than freeze quantity 
+
 
 
 

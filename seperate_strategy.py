@@ -556,7 +556,7 @@ class NewStrategy:
                 self.trace_execution(f"Processing order {order_id}: Leg Type: {leg_type}, Status: {status}, Option Type: {option_type}, Qty: {qty}, Type: {typ}")
 
                 # Cancel incomplete orders
-                if status in ['open', 'pending', 'trigger_pending']:
+                if status in ['open', 'pending', 'trigger_pending', 'fill']:
                     self.trace_execution(f"Canceling incomplete order: {order_id}")
                     cancel_response = self.api.cancel_order(order_id)
                     if 'result' not in cancel_response:
