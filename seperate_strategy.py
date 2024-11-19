@@ -568,9 +568,9 @@ class NewStrategy:
                         self.strategy_log_class, tsym, order_id, typ, option_type, qty, str(cancel_response),
                         'CANCEL', 0, 0, 'cancel_order'
                     )
-                    if leg_type == 'start':  # Skip quantity for initial unexecuted orders
-                        continue
                     qty = float(order.get('flqty', 0))  # Adjusted filled quantity
+                    if leg_type == 'start' and qty == 0:  # Skip quantity for initial unexecuted orders
+                        continue
 
                 # Update totals for completed orders
                 if option_type in totals:
