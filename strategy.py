@@ -17,7 +17,7 @@ logging.basicConfig(filename=f'strategy_log_files/strategy__{datetime.now(ist).s
 def trace_execution(str= 'no data', data=datetime.now(ist).strftime("%Y %m %d - %H /%M/ %S")):
     print(f'{str} at {data}')
     logging.info(f'{str} at {data}')
-# flag to tell us if the api_websocket is open
+# flag to tell us if the api_websocket is open updated and running
 
 
 # Constants Configs

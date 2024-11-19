@@ -708,9 +708,10 @@ class NewStrategy:
                     # Fetch initial sell prices for CE and PE
                     sell_price_ce = self.api_websocket.fetch_last_trade_price('CE', self.LEG_TOKEN)
                     sell_price_pe = self.api_websocket.fetch_last_trade_price('PE', self.LEG_TOKEN)
-                    
+                    pe_strike = (atm_strike - self.STRIKE_DIFFERENCE)
+                    ce_strike = (atm_strike + self.STRIKE_DIFFERENCE)
                     self.trace_execution(f'Option Prices - CE: {sell_price_ce}, PE: {sell_price_pe}')
-                    self.trace_execution(f'passed OPTION PRICE {atm_strike - self.STRIKE_DIFFERENCE} pe price {sell_price_pe} _ {atm_strike + self.STRIKE_DIFFERENCE} ce price {sell_price_ce}')
+                    self.trace_execution(f'passed OPTION PRICE {pe_strike} pe price {sell_price_pe} _ {ce_strike} ce price {sell_price_ce}')
 
                     # Calculate lots based on available margin if BUY_BACK_STATIC is not set
                     if not self.BUY_BACK_STATIC:
@@ -719,8 +720,8 @@ class NewStrategy:
                         self.BUY_BACK_LOTS = min(ce_lot, pe_lot)
 
                     # Log initial order entries
-                    logger_entry(self.strategy_log_class, 'CE', 'orderno', 'direction', 'CE', self.ONE_LOT_QUANTITY, sell_price_ce, 'GET MKT', 0, 0, 'start')
-                    logger_entry(self.strategy_log_class, 'PE', 'orderno', 'direction', 'PE', self.ONE_LOT_QUANTITY, sell_price_pe, 'GET MKT', 0, 0, 'start')
+                    logger_entry(self.strategy_log_class, ce_strike, 'orderno', 'direction', 'CE', self.ONE_LOT_QUANTITY, sell_price_ce, 'GET MKT', 'buyBacklot', self.BUY_BACK_LOTS, 'start')
+                    logger_entry(self.strategy_log_class, pe_strike, 'orderno', 'direction', 'PE', self.ONE_LOT_QUANTITY, sell_price_pe, 'GET MKT', 'buyBacklot', self.BUY_BACK_LOTS, 'start')
 
                     # Initialize price data for CE and PE
                     self.PRICE_DATA = {
