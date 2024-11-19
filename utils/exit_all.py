@@ -59,4 +59,4 @@ def exit_all_positions(api = {}):
         
         
         
-exit_all_positions()
+#exit_all_positions()
