@@ -20,16 +20,16 @@ Reattach to the screen session (if you want to see your script's progress later)
 
 
 improvements 
-   if cancel order success then only place market order
-   in exit_order partial fulfillment orders need to handled
+   if cancel order success then only place market order - done
+   in exit_order partial fulfillment orders need to handled - done need complete testing
    json generating html need to create  - optimize
 
    dynamic quantity selection based on flag and margin need to implement - test
 
    trail profit concept need to create in pnl. - test
    trail loss concept unknown - suggestion
-   git pull need to be done before running the code 
-   check weather more selling is happening to wait randomly 
+   git pull need to be done before running the code  - done
+   check weather more selling is happening to wait randomly - not needed now
    add try except block in all classes.
    
    EKS AKS aws  - explore
@@ -48,7 +48,7 @@ mandatory
         log details
     
     partial execution quantity must be  checked(exit_starategy)
-                            qty = float(order.get('flqty', 0))  # Adjusted filled quantity
+                    qty = float(order.get('flqty', 0))  # Adjusted filled quantity
                     if leg_type == 'start' and qty == 0:  # Skip quantity for initial unexecuted orders
                         continue
 
