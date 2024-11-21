@@ -31,6 +31,9 @@ improvements
    git pull need to be done before running the code  - done
    check weather more selling is happening to wait randomly - not needed now
    add try except block in all classes.
+
+   in place order need to support orders more than freeze quantity
+   orders status need to push more than one value fro freeze multiple order
    
    EKS AKS aws  - explore
 
