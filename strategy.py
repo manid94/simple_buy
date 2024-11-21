@@ -22,7 +22,7 @@ def trace_execution(str= 'no data', data=datetime.now(ist).strftime("%Y %m %d - 
 
 # Constants Configs
 SYMBOL = 'NiftyBank'
-BUY_BACK_STATIC = True
+BUY_BACK_STATIC = False
 INITIAL_LOTS = 1  # Start with 1 lot
 STRIKE_DIFFERENCE = 0
 ONE_LOT_QUANTITY = 15  # Number of units per lot in Bank Nifty
@@ -184,13 +184,13 @@ def start_the_strategy(stop_event):
         nifty_thread = MyThread(target=nifty_strategy.run_strategy, args=(), daemon=True)
         nifty_thread.start()
 
-        bank_nifty_strategy = NewStrategy(bank_nifty_data)
-        bank_nifty_thread = MyThread(target=bank_nifty_strategy.run_strategy, args=(), daemon=True)
-        bank_nifty_thread.start()
+        # bank_nifty_strategy = NewStrategy(bank_nifty_data)
+        # bank_nifty_thread = MyThread(target=bank_nifty_strategy.run_strategy, args=(), daemon=True)
+        # bank_nifty_thread.start()
         #run_strategy(stop_event, api_websocket)
 
         nifty_thread.join()
-        bank_nifty_thread.join()
+        # bank_nifty_thread.join()
         api.close_websocket()
         return True
     except TypeError as e:
