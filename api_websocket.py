@@ -9,6 +9,7 @@ class OpenWebSocket:
         print('entered')
         self.SYMBOLDICT = {}
         self.ORDER_STATUS = []
+        self.subscribedTokens = []
         self.api = api
         self.socket_opened = False
         #self.event_handler_order_update = order_updates
@@ -92,6 +93,14 @@ class OpenWebSocket:
         #api.start_websocket(order_update_callback=event_handler_order_update, subscribe_callback=event_handler_quote_update, socket_open_callback=open_callback)
         print(self.socket_opened)
         return True
+    
+    def subscribe_api(self, subcribeToken):
+        print(f'subscribe token {subcribeToken}')
+        if subcribeToken not in self.subscribedTokens :
+            self.api.subscribe(subcribeToken)
+            self.subscribedTokens.append(subcribeToken)
+        return True
+    
     
     def fetch_last_trade_price(self, option_type, LEG_TOKEN):
         # print('Deepak')

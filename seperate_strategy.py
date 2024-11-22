@@ -51,7 +51,6 @@ class NewStrategy:
         # Strategy level variables
         self.LEG_TOKEN = {}
         self.CURRENT_STRATEGY_ORDERS = []
-        self.subscribedTokens = []
         self.ONE_LOT_QUANTITY = get_symbol_lot_qty(datas['SYMBOL'])
 
         # Price data structure to track CE and PE prices
@@ -114,17 +113,18 @@ class NewStrategy:
                 'PE_tsym': pe_option['tsym'],
                 'CE_tsym': ce_option['tsym']
             }
-
+            
             # Subscription for tokens if not already subscribed
             subscribeDataPE = f"NFO|{pe_option['token']}"
             subscribeDataCE = f"NFO|{ce_option['token']}"
             
-            if subscribeDataPE not in self.subscribedTokens and subscribeDataCE not in self.subscribedTokens:
-                self.api.subscribe([subscribeDataPE, subscribeDataCE])
-                self.subscribedTokens.extend([subscribeDataPE, subscribeDataCE])
-                time.sleep(0.1) # wait for 10 milli  second to get data from websocket
+            self.api_websocket.subscribe_api(subscribeDataPE)
+            self.api_websocket.subscribe_api(subscribeDataCE)
+            self.trace_execution(f'subscribe tokens  {subscribeDataPE} {subscribeDataCE} {atm_strike}')
+            time.sleep(0.1) # wait for 10 milli  second to get data from websocket
 
-            self.trace_execution('completed in fetch_atm_strike')
+
+            self.trace_execution(f'completed in fetch_atm_strike {subscribeDataPE} {subscribeDataCE} {atm_strike}')
             return atm_strike
 
         except Exception as e:
