@@ -32,8 +32,7 @@ improvements
    check weather more selling is happening to wait randomly - not needed now
    add try except block in all classes.
 
-   in place order need to support orders more than freeze quantity
-   orders status need to push more than one value fro freeze multiple order
+
    
    EKS AKS aws  - explore
 
@@ -41,8 +40,8 @@ improvements
    
 
 mandatory
- trail profit concept need to create in pnl. - test
- dynamic quantity selection based on flag and margin need to implement - test
+ trail profit concept need to create in pnl. - done test
+ dynamic quantity selection based on flag and margin need to implement - done test
  exit all  logic need to test - testing 
 
     exit all on buy - working fine.
@@ -50,12 +49,16 @@ mandatory
         and reconfirm sell market order
         log details
     
-    partial execution quantity must be  checked(exit_starategy)
+    partial execution quantity must be  checked(exit_starategy) - done test
                     qty = float(order.get('flqty', 0))  # Adjusted filled quantity
                     if leg_type == 'start' and qty == 0:  # Skip quantity for initial unexecuted orders
                         continue
 
+low priority
+
     enhance the code to accept quantity more than freeze quantity 
+    in place order need to support orders more than freeze quantity
+    orders status need to push more than one value for freeze multiple order
 
 
 
