@@ -1,7 +1,8 @@
 import threading
 import time
 from datetime import datetime
-from strategy import start_the_strategy
+from strategy import start_the_strategy, trace_execution
+from utils.exit_all import exit_all_positions
 from utils.utils import ist
 
 # Create an Event object to signal the thread
@@ -16,50 +17,54 @@ TOKENGENERATION_TIME = {
 }
 
 STRATEGY_CLOSE_TIME = {
-    'hours': 15,
+    'hours': 23,
     'minutes': 22,
     'seconds': 0
 }
 
 def main():
-    # Define the end time as 2:30 PM
-    start_time = ist_datatime.replace(hour=TOKENGENERATION_TIME['hours'], minute=TOKENGENERATION_TIME['minutes'], second=TOKENGENERATION_TIME['seconds'], microsecond=0).time()
-    end_time = ist_datatime.replace(hour=STRATEGY_CLOSE_TIME['hours'], minute=STRATEGY_CLOSE_TIME['minutes'], second=STRATEGY_CLOSE_TIME['seconds'], microsecond=0).time()
-    entry_happened_today = False
-    
-    stop_event = threading.Event()
-    thread = threading.Thread(target=start_the_strategy, args=(stop_event,))
+    try:
+        # Define the end time as 2:30 PM
+        start_time = ist_datatime.replace(hour=TOKENGENERATION_TIME['hours'], minute=TOKENGENERATION_TIME['minutes'], second=TOKENGENERATION_TIME['seconds'], microsecond=0).time()
+        end_time = ist_datatime.replace(hour=STRATEGY_CLOSE_TIME['hours'], minute=STRATEGY_CLOSE_TIME['minutes'], second=STRATEGY_CLOSE_TIME['seconds'], microsecond=0).time()
+        entry_happened_today = False
+        
+        stop_event = threading.Event()
+        thread = threading.Thread(target=start_the_strategy, args=(stop_event,))
 
-    # Keep running the task periodically until 2:30 PM
-    while True:
-        current_time = datetime.now(ist).time()
-        print("entered.")
-        if(start_time <= current_time <= end_time) and not entry_happened_today:
-            print("Starting strategy thread.")
-            try:
-                thread.start()
-            except Exception as e:
-                print(f"Error while starting the strategy: {e}")
-            entry_happened_today = True
-            print("Strategy has started.")
-        else:
-            print('already running')
+        # Keep running the task periodically until 2:30 PM
+        while True:
+            current_time = datetime.now(ist).time()
+            print("entered.")
+            if(start_time <= current_time <= end_time) and not entry_happened_today:
+                print("Starting strategy thread.")
+                try:
+                    thread.start()
+                except Exception as e:
+                    print(f"Error while starting the strategy: {e}")
+                entry_happened_today = True
+                print("Strategy has started.")
+            else:
+                print('already running')
 
-        if current_time > end_time:
-            print("Stopping strategy thread.")
-            stop_event.set()  # Signal the thread to stop
-            try:
-                if thread.join:
-                    thread.join()
-            except Exception as e:
-                print(f"Error while starting the strategy: {e}")
-            print("Strategy has stopped for today.")
-            
-            # Reset for the next day
-            time.sleep(60 * 60 * 10)  # Sleep for 10 hours before re-checking
-            entry_happened_today = False
-            stop_event.clear()  # Clear the stop event flag
-        time.sleep(20) 
-    return True
-
+            if current_time > end_time:
+                print("Stopping strategy thread.")
+                stop_event.set()  # Signal the thread to stop
+                try:
+                    if thread.join:
+                        thread.join()
+                except Exception as e:
+                    print(f"Error while starting the strategy: {e}")
+                print("Strategy has stopped for today.")
+                
+                # Reset for the next day
+                time.sleep(60 * 60 * 10)  # Sleep for 10 hours before re-checking
+                entry_happened_today = False
+                stop_event.clear()  # Clear the stop event flag
+            time.sleep(20) 
+        return True
+    except Exception as e:
+        trace_execution(f'error in main {e}')
+        exit_all_positions()
+        return True
 main()
