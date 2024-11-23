@@ -88,6 +88,7 @@ class NewStrategy:
         try:
             # Fetch the current NIFTY price
             symbol_details = self.api.get_quotes(exchange='NSE', token=self.token)
+            print(self.api.get_quotes(exchange='NSE', token=self.token))
             self.trace_execution(f'entered in fetch_atm_strike {symbol_details}')
             current_price = float(symbol_details['lp'])
             symbol_name = symbol_details['symname']
