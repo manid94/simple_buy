@@ -59,6 +59,7 @@ low priority
     enhance the code to accept quantity more than freeze quantity 
     in place order need to support orders more than freeze quantity
     orders status need to push more than one value for freeze multiple order
+    need to support angel broking api
 
 
 

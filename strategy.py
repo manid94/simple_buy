@@ -1,13 +1,12 @@
 import time
 import logging
-from utils.utils import ist
-from utils.brokerapi import getshoonyatradeapi
 from datetime import datetime
 from api_websocket import OpenWebSocket
-from utils.custom_threading import MyThread
 from seperate_strategy import NewStrategy
+from utils.utils import ist
+from utils.brokerapi import getshoonyatradeapi
 from utils.exit_all import exit_all_positions
-
+from utils.custom_threading import MyThread
 
 
 
@@ -209,3 +208,5 @@ def start_the_strategy(stop_event):
         trace_execution(f"An unexpected error occurred: {e}")
         exit_all_positions(api)
         raise ValueError('Error on exit start_the_strategy')
+    
+

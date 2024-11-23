@@ -1,5 +1,5 @@
 import time
-from brokerapi import getshoonyatradeapi
+from utils.brokerapi import getshoonyatradeapi # since code was executing from root directory we need to consider it
 
 def place_market_order(new_session, order_type, data):
             prd = data.get('prd', 'I')  # Use 'I' as default if 'prd' is missing
