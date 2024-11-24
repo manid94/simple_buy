@@ -39,7 +39,7 @@ ENTRY_TIME = {
     'seconds': 0
 }
 EXIT_TIME = {
-    'hours': 14,
+    'hours': 23,
     'minutes': 50,
     'seconds': 0
 
