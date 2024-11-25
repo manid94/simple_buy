@@ -33,34 +33,34 @@ def main():
     server_process = multiprocessing.Process(target=start_server)
     server_process.start()
 
-    # try:
-    #     while True:
-    #         current_time = datetime.now(ist).time()
-    #         if start_time <= current_time <= end_time and not entry_happened_today:
-    #             print("Starting strategy thread.")
-    #             try:
-    #                 strategy_thread.start()
-    #             except Exception as e:
-    #                 print(f"Error while starting the strategy: {e}")
-    #             entry_happened_today = True
-    #             print("Strategy has started.")
-    #         elif current_time > end_time:
-    #             print("Stopping strategy thread.")
-    #             stop_event.set()  # Signal the thread to stop
-    #             strategy_thread.join()  # Wait for the thread to finish
-    #             print("Strategy has stopped for today.")
+    try:
+        while True:
+            current_time = datetime.now(ist).time()
+            if start_time <= current_time <= end_time and not entry_happened_today:
+                print("Starting strategy thread.")
+                try:
+                    strategy_thread.start()
+                except Exception as e:
+                    print(f"Error while starting the strategy: {e}")
+                entry_happened_today = True
+                print("Strategy has started.")
+            elif current_time > end_time:
+                print("Stopping strategy thread.")
+                stop_event.set()  # Signal the thread to stop
+                strategy_thread.join()  # Wait for the thread to finish
+                print("Strategy has stopped for today.")
                 
-    #             # Reset for the next day
-    #             time.sleep(60 * 60 * 10)  # Sleep for 10 hours before re-checking
-    #             entry_happened_today = False
-    #             stop_event.clear()  # Clear the stop event flag
-    #         time.sleep(20)
-    # except KeyboardInterrupt:
-    #     print("Shutting down server and strategy...")
-    # finally:
-    #     if server_process.is_alive():
-    #         server_process.terminate()  # Ensure the server process stops
-    #     print("Server process terminated.")
+                # Reset for the next day
+                time.sleep(60 * 60 * 10)  # Sleep for 10 hours before re-checking
+                entry_happened_today = False
+                stop_event.clear()  # Clear the stop event flag
+            time.sleep(20)
+    except KeyboardInterrupt:
+        print("Shutting down server and strategy...")
+    finally:
+        if server_process.is_alive():
+            server_process.terminate()  # Ensure the server process stops
+        print("Server process terminated.")
     return True
 
 # Add this block for Windows compatibility

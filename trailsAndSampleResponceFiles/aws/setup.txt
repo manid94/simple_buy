@@ -36,6 +36,20 @@ control instance policy  -- JSON
 
   enable elastic ip and assign it to the instance
 
+  For server listening
+
+    sudo yum install iptables -y   - install
+    iptables --version - to check installation and version
+
+
+  check any active firewall
+    sudo iptables -L
+  if any active fire wall 
+    sudo iptables -A INPUT -p tcp --dport 5000 -j ACCEPT
+
+
+
+
 
 AmazonDMSCloudWatchLogsRole
 AWS managed
@@ -1977,3 +1991,32 @@ Elastic IPs remain static as long as they are associated with an instance. Howev
 If you stop the instance, the IP remains linked.
 If you terminate the instance, the IP is released unless reassigned.
 To avoid releasing the Elastic IP, keep it associated or reassign it to another instance.
+
+
+
+
+
+If your Flask application works with curl on the EC2 instance but not in the browser, it typically indicates a network or configuration issue preventing external access to your Flask application. Below are the steps to troubleshoot and resolve the problem:
+
+1. Verify Flask is Listening on 0.0.0.0
+By default, Flask binds to 127.0.0.1, which is only accessible locally (inside the EC2 instance). Update your app.py to bind to 0.0.0.0, which listens on all available network interfaces.
+
+In your app.py, modify the app.run() line:
+
+python
+Copy code
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
+2. Check EC2 Security Group Rules
+Ensure the Security Group for your EC2 instance allows inbound traffic on the port Flask is running on (e.g., 5000).
+
+Go to the AWS Management Console > EC2 > Security Groups.
+Select the Security Group attached to your instance.
+Edit the Inbound Rules:
+Add a rule to allow traffic on port 5000 (for Flask):
+yaml
+Copy code
+Type: Custom TCP Rule
+Protocol: TCP
+Port Range: 5000
+Source: 0.0.0.0/0
