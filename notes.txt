@@ -20,24 +20,52 @@ Reattach to the screen session (if you want to see your script's progress later)
 
 
 improvements 
-   if cancel order success then only place market order
-   in exit_order partial fulfillment orders need to handled
+   if cancel order success then only place market order - done
+   in exit_order partial fulfillment orders need to handled - done need complete testing
    json generating html need to create  - optimize
 
    dynamic quantity selection based on flag and margin need to implement - test
 
    trail profit concept need to create in pnl. - test
    trail loss concept unknown - suggestion
-   git pull need to be done before running the code 
-   check weather more selling is happening to wait randomly 
+   git pull need to be done before running the code  - done
+   check weather more selling is happening to wait randomly - not needed now
    add try except block in all classes.
 
 
+   
+   EKS AKS aws  - explore
+
+
+   
+
+mandatory
+ trail profit concept need to create in pnl. - done test
+ dynamic quantity selection based on flag and margin need to implement - done test
+ exit all  logic need to test - testing 
+
+    exit all on buy - working fine.
+        need to test sell exit 
+        and reconfirm sell market order
+        log details
+    
+    partial execution quantity must be  checked(exit_starategy) - done test
+                    qty = float(order.get('flqty', 0))  # Adjusted filled quantity
+                    if leg_type == 'start' and qty == 0:  # Skip quantity for initial unexecuted orders
+                        continue
+
+low priority
+
+    enhance the code to accept quantity more than freeze quantity 
+    in place order need to support orders more than freeze quantity
+    orders status need to push more than one value for freeze multiple order
+    need to support angel broking api
 
 
 
 
-move print and logging in utils function
+
+move print and logging in utils function - almost done
 
 
 

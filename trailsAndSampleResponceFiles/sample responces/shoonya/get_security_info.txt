@@ -1,0 +1,18 @@
+{
+    'request_time' '142332 14-10-2024',
+    'stat' 'Ok',
+    'exch' 'NSE',
+    'tsym' 'NIFTY50 EQL Wgt',
+    'cname' 'NIFTY50 EQL Wgt',
+    'symname' 'NIFTY50 EQL Wgt',
+    'seg' 'EQT',
+    'instname' 'UNDIND',
+    'pp' '2',
+    'prcftr' '1.000000',
+    'ls' '1',
+    'ti' '0.05',
+    'mult' '1',
+    'nontrd' '1',
+    'prcftr_d' '(1  1 )  (1  1)',
+    'token' '26056'
+}

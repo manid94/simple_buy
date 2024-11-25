@@ -65,8 +65,6 @@ def getflattradeapi(token):
 
 
 def getshoonyatradeapi():
-    from NorenRestApiPy.NorenApi import NorenApi
-
     class ShoonyaTradeApiPy(NorenApi):
         def __init__(self):
             NorenApi.__init__(self,  host='https://api.shoonya.com/NorenWClientTP/', websocket='wss://api.shoonya.com/NorenWSTP/')

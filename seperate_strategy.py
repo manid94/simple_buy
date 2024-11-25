@@ -4,7 +4,7 @@ from datetime import datetime
 from logger import LocalJsonLogger, ThrottlingLogger, logger_entry
 from utils.custom_threading import MyThread
 from strategy_log_files.strategy_log import createLogger
-from utils.trailing_strategy import  Tralling
+from utils.trailing_strategy import Tralling
 
 
 # flag to tell us if the api_websocket is open
@@ -62,6 +62,7 @@ class NewStrategy:
                                                  'BUY_BACK_BUY_PE', 'BUY_BACK_SELL_PE', 
                                                  'RE_ENTRY_BUY_PE', 'RE_ENTRY_SELL_PE']}
         }
+        
 
         # Strategy status flags
         self.strategy_running = False
@@ -87,6 +88,8 @@ class NewStrategy:
         try:
             # Fetch the current NIFTY price
             symbol_details = self.api.get_quotes(exchange='NSE', token=self.token)
+            print(self.api.get_quotes(exchange='NSE', token=self.token))
+            self.trace_execution(f'entered in fetch_atm_strike {symbol_details}')
             current_price = float(symbol_details['lp'])
             symbol_name = symbol_details['symname']
 
@@ -163,8 +166,8 @@ class NewStrategy:
         except Exception as e:
             # Exit strategy if needed and log the error
             if not self.exited_strategy_completed:
-                self.exit_strategy()
                 self.trace_execution(f'Error in calculate_leg_pnl: {e}')
+                self.exit_strategy()
             else:
                 self.trace_execution(f'calculate_leg_pnl Error but strategy already exited: {e}')
             return 0.0  # Return 0 as default in case of error
@@ -268,8 +271,6 @@ class NewStrategy:
                 self.trace_execution(f'check_for_stop_loss Error but already exited: {e}')
 
 
-
-        
 
     def sell_at_limit_price(self, option_type, buydetails):
         self.trace_execution('entered in sell_at_limit_price')
@@ -556,7 +557,7 @@ class NewStrategy:
                 self.trace_execution(f"Processing order {order_id}: Leg Type: {leg_type}, Status: {status}, Option Type: {option_type}, Qty: {qty}, Type: {typ}")
 
                 # Cancel incomplete orders
-                if status in ['open', 'pending', 'trigger_pending']:
+                if status in ['open', 'pending', 'trigger_pending', 'fill']:
                     self.trace_execution(f"Canceling incomplete order: {order_id}")
                     cancel_response = self.api.cancel_order(order_id)
                     if 'result' not in cancel_response:
@@ -568,9 +569,9 @@ class NewStrategy:
                         self.strategy_log_class, tsym, order_id, typ, option_type, qty, str(cancel_response),
                         'CANCEL', 0, 0, 'cancel_order'
                     )
-                    if leg_type == 'start':  # Skip quantity for initial unexecuted orders
-                        continue
                     qty = float(order.get('flqty', 0))  # Adjusted filled quantity
+                    if leg_type == 'start' and qty == 0:  # Skip quantity for initial unexecuted orders
+                        continue
 
                 # Update totals for completed orders
                 if option_type in totals:
@@ -674,99 +675,97 @@ class NewStrategy:
 
     def run_strategy(self):
         self.trace_execution('passed run_strategy')
-        
-        # Initialize necessary variables
-        self.strategy_log_class = LocalJsonLogger(self.trace_execution, self.SYMBOL)
-        start_time = ist_datatime.replace(
-            hour=self.ENTRY_TIME['hours'], 
-            minute=self.ENTRY_TIME['minutes'], 
-            second=self.ENTRY_TIME['seconds'], 
-            microsecond=0
-        ).time()
-        end_time = ist_datatime.replace(
-            hour=self.EXIT_TIME['hours'], 
-            minute=self.EXIT_TIME['minutes'], 
-            second=self.EXIT_TIME['seconds'], 
-            microsecond=0
-        ).time()
-        
-        lots = self.INITIAL_LOTS * self.ONE_LOT_QUANTITY
-        self.trace_execution('entered run_strategy')
-
-        while not self.strategy_running:
-            current_time = datetime.now(ist).time()
+        try:
+            # Initialize necessary variables
+            self.strategy_log_class = LocalJsonLogger(self.trace_execution, self.SYMBOL)
+            start_time = ist_datatime.replace(
+                hour=self.ENTRY_TIME['hours'], 
+                minute=self.ENTRY_TIME['minutes'], 
+                second=self.ENTRY_TIME['seconds'], 
+                microsecond=0
+            ).time()
+            end_time = ist_datatime.replace(
+                hour=self.EXIT_TIME['hours'], 
+                minute=self.EXIT_TIME['minutes'], 
+                second=self.EXIT_TIME['seconds'], 
+                microsecond=0
+            ).time()
             
-            if current_time >= end_time:
-                self.exit_strategy()
-                break
+            self.trace_execution('entered run_strategy')
 
-            if start_time <= current_time <= end_time:
-                if not self.strategy_running:
-                    atm_strike = self.fetch_atm_strike()
-                    self.trace_execution(f'ATM strike price fetched {atm_strike}')
+            while not self.strategy_running:
+                current_time = datetime.now(ist).time()
+                
+                if current_time >= end_time:
+                    self.exit_strategy()
+                    break
 
-                    # Fetch initial sell prices for CE and PE
-                    sell_price_ce = self.api_websocket.fetch_last_trade_price('CE', self.LEG_TOKEN)
-                    sell_price_pe = self.api_websocket.fetch_last_trade_price('PE', self.LEG_TOKEN)
-                    pe_strike = (atm_strike - self.STRIKE_DIFFERENCE)
-                    ce_strike = (atm_strike + self.STRIKE_DIFFERENCE)
-                    self.trace_execution(f'Option Prices - CE: {sell_price_ce}, PE: {sell_price_pe}')
-                    self.trace_execution(f'passed OPTION PRICE {pe_strike} pe price {sell_price_pe} _ {ce_strike} ce price {sell_price_ce}')
+                if start_time <= current_time <= end_time:
+                    if not self.strategy_running:
+                        atm_strike = self.fetch_atm_strike()
+                        self.trace_execution(f'ATM strike price fetched {atm_strike}')
 
-                    # Calculate lots based on available margin if BUY_BACK_STATIC is not set
-                    if not self.BUY_BACK_STATIC:
-                        ce_lot = int(self.AVAILABLE_MARGIN / (self.ONE_LOT_QUANTITY * sell_price_ce))
-                        pe_lot = int(self.AVAILABLE_MARGIN / (self.ONE_LOT_QUANTITY * sell_price_pe))
-                        self.BUY_BACK_LOTS = min(ce_lot, pe_lot)
+                        # Fetch initial sell prices for CE and PE
+                        sell_price_ce = self.api_websocket.fetch_last_trade_price('CE', self.LEG_TOKEN)
+                        sell_price_pe = self.api_websocket.fetch_last_trade_price('PE', self.LEG_TOKEN)
+                        pe_strike = (atm_strike - self.STRIKE_DIFFERENCE)
+                        ce_strike = (atm_strike + self.STRIKE_DIFFERENCE)
+                        self.trace_execution(f'Option Prices - CE: {sell_price_ce}, PE: {sell_price_pe}')
+                        self.trace_execution(f'passed OPTION PRICE {pe_strike} pe price {sell_price_pe} _ {ce_strike} ce price {sell_price_ce}')
 
-                    # Log initial order entries
-                    logger_entry(self.strategy_log_class, ce_strike, 'orderno', 'direction', 'CE', self.ONE_LOT_QUANTITY, sell_price_ce, 'GET MKT', 'buyBacklot', self.BUY_BACK_LOTS, 'start')
-                    logger_entry(self.strategy_log_class, pe_strike, 'orderno', 'direction', 'PE', self.ONE_LOT_QUANTITY, sell_price_pe, 'GET MKT', 'buyBacklot', self.BUY_BACK_LOTS, 'start')
+                        # Calculate lots based on available margin if BUY_BACK_STATIC is not set
+                        if not self.BUY_BACK_STATIC:
+                            ce_lot = int(self.AVAILABLE_MARGIN / (self.ONE_LOT_QUANTITY * sell_price_ce))
+                            pe_lot = int(self.AVAILABLE_MARGIN / (self.ONE_LOT_QUANTITY * sell_price_pe))
+                            self.BUY_BACK_LOTS = min(ce_lot, pe_lot)
 
-                    # Initialize price data for CE and PE
-                    self.PRICE_DATA = {
-                        'CE_PRICE_DATA': {'INITIAL_SELL_CE': 0},
-                        'PE_PRICE_DATA': {'INITIAL_SELL_PE': 0}
-                    }
+                        # Log initial order entries
+                        logger_entry(self.strategy_log_class, ce_strike, 'orderno', 'direction', 'CE', self.ONE_LOT_QUANTITY, sell_price_ce, 'GET MKT', 'buyBacklot', self.BUY_BACK_LOTS, 'start')
+                        logger_entry(self.strategy_log_class, pe_strike, 'orderno', 'direction', 'PE', self.ONE_LOT_QUANTITY, sell_price_pe, 'GET MKT', 'buyBacklot', self.BUY_BACK_LOTS, 'start')
 
-                    # Start monitoring threads for CE and PE legs and strategy
-                    self.strategy_running = True
-                    ce_thread = MyThread(target=self.monitor_leg, args=('CE', sell_price_ce), daemon=True)
-                    pe_thread = MyThread(target=self.monitor_leg, args=('PE', sell_price_pe), daemon=True)
-                    strategy_thread = MyThread(target=self.monitor_strategy, daemon=True)
 
-                    try:
-                        self.trace_execution('Starting strategy threads')
-                        ce_thread.start()
-                        pe_thread.start()
-                        strategy_thread.start()
-                        
-                        ce_thread.join()
-                        pe_thread.join()
-                        self.exit_strategy()
-                        strategy_thread.join()
-                        break
 
-                    except (TypeError, ZeroDivisionError, ValueError) as e:
-                        if not self.exited_strategy_completed:
-                            self.trace_execution(f'Error in run_strategy ({type(e).__name__}): {e}')
+                        # Start monitoring threads for CE and PE legs and strategy
+                        self.strategy_running = True
+                        ce_thread = MyThread(target=self.monitor_leg, args=('CE', sell_price_ce), daemon=True)
+                        pe_thread = MyThread(target=self.monitor_leg, args=('PE', sell_price_pe), daemon=True)
+                        strategy_thread = MyThread(target=self.monitor_strategy, daemon=True)
+
+                        try:
+                            self.trace_execution('Starting strategy threads')
+                            ce_thread.start()
+                            pe_thread.start()
+                            strategy_thread.start()
+                            
+                            ce_thread.join()
+                            pe_thread.join()
                             self.exit_strategy()
-                        else:
-                            self.trace_execution(f'{self.SYMBOL} run_strategy Error but already exited: {e}')
-                        return True
+                            strategy_thread.join()
+                            break
 
-                    except Exception as e:
-                        if not self.exited_strategy_completed:
-                            self.trace_execution(f'{self.SYMBOL} Unexpected error in run_strategy: {e}')
-                            self.exit_strategy()
-                        else:
-                            self.trace_execution(f'{self.SYMBOL} run_strategy Error but already exited: {e}')
-                        return True
+                        except (TypeError, ZeroDivisionError, ValueError) as e:
+                            if not self.exited_strategy_completed:
+                                self.trace_execution(f'Error in run_strategy ({type(e).__name__}): {e}')
+                                self.exit_strategy()
+                            else:
+                                self.trace_execution(f'{self.SYMBOL} run_strategy Error but already exited: {e}')
+                            return True
 
-            else:
-                # Calculate time to sleep until start_time
-                time_to_sleep = (datetime.combine(datetime.today(), start_time) - datetime.combine(datetime.today(), current_time)).total_seconds()
-                self.trace_execution("Outside trading hours, strategy paused.")
-                time.sleep(max(time_to_sleep, 0))  # Ensure no negative sleep
+                        except Exception as e:
+                            if not self.exited_strategy_completed:
+                                self.trace_execution(f'{self.SYMBOL} Unexpected error in run_strategy: {e}')
+                                self.exit_strategy()
+                            else:
+                                self.trace_execution(f'{self.SYMBOL} run_strategy Error but already exited: {e}')
+                            return True
 
-        return True
+                else:
+                    # Calculate time to sleep until start_time
+                    time_to_sleep = (datetime.combine(datetime.today(), start_time) - datetime.combine(datetime.today(), current_time)).total_seconds()
+                    self.trace_execution("Outside trading hours, strategy paused.")
+                    time.sleep(max(time_to_sleep, 0))  # Ensure no negative sleep
+
+            return True
+        except Exception as e: 
+            self.trace_execution('error in run_strategy')
+            return True
