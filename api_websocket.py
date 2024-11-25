@@ -1,16 +1,17 @@
 import pandas as pd
-import copy
+import os
 import time
 
 GLOBAL_ORDER_STATUS = {}
 
 class OpenWebSocket:
-    def __init__(self, api):
+    def __init__(self, api, trace_execution):
         print('entered')
         self.SYMBOLDICT = {}
         self.ORDER_STATUS = []
         self.subscribedTokens = []
         self.api = api
+        self.trace_execution = trace_execution
         self.socket_opened = False
         #self.event_handler_order_update = order_updates
         searchData = api.searchscrip(exchange='NFO', searchtext='SBI')
@@ -81,21 +82,27 @@ class OpenWebSocket:
     def open_callback(self):
         #global socket_opened
         self.socket_opened = True
-        print('app is connected')
+        self.trace_execution('app is connected')
 
         #api.subscribe(['NSE|22', 'BSE|522032'])
+        
+    def socket_error_callback(self, error):
+        self.trace_execution(f'+error on socket connection -   {error}')
+        raise ValueError(f'+error on socket connection -   {error}')
+        #os._exit(0)
+        
 
     #end of callbacks
     def open_socket(self):
         if self.socket_opened != True:
-            print(self.socket_opened)
-            self.api.start_websocket(order_update_callback=self.event_handler_order_update, subscribe_callback=self.event_handler_quote_update, socket_open_callback=self.open_callback)
+            self.trace_execution(f'{self.socket_opened} - SOCKET STATUS')
+            self.api.start_websocket(order_update_callback=self.event_handler_order_update, subscribe_callback=self.event_handler_quote_update, socket_open_callback=self.open_callback, socket_error_callback=self.socket_error_callback)
         #api.start_websocket(order_update_callback=event_handler_order_update, subscribe_callback=event_handler_quote_update, socket_open_callback=open_callback)
-        print(self.socket_opened)
+        self.trace_execution(F'{self.socket_opened} - out SOCKET STATUS')
         return True
     
     def subscribe_api(self, subcribeToken):
-        print(f'subscribe token {subcribeToken}')
+        self.trace_execution(f'subscribe token {subcribeToken}')
         if subcribeToken not in self.subscribedTokens :
             self.api.subscribe(subcribeToken)
             self.subscribedTokens.append(subcribeToken)
