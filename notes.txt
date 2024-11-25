@@ -62,6 +62,51 @@ low priority
     need to support angel broking api
 
 
+25/11
+    standardize everything
+
+    simple_buy/
+├── strategies/
+│   ├── strategy_one.py
+│   └── strategy_two.py
+├── utils/
+│   ├── logger.py
+│   ├── data_processing.py
+│   └── config_loader.py
+├── api/
+│   ├── api_connector.py
+│   ├── websocket_manager.py
+│   └── credentials.py
+└── main.py
+
+
+simple_buy/
+├── .github/
+│   └── workflows/
+├── data/
+│   ├── raw/
+│   └── processed/
+├── logs/
+│   ├── general/
+│   └── strategy/
+├── src/
+│   ├── api/
+│   │   └── websocket.py
+│   ├── strategies/
+│   │   ├── base_strategy.py
+│   │   └── custom_strategy.py
+│   ├── utils/
+│   │   ├── logger.py
+│   │   └── helpers.py
+│   └── main.py
+├── tests/
+│   ├── test_api.py
+│   ├── test_strategies.py
+│   └── test_utils.py
+├── .gitignore
+├── requirements.txt
+└── README.md
+
 
 
 
