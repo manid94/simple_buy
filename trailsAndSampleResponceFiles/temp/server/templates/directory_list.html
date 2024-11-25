@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directory Browser</title>
+</head>
+<body>
+    <h1>Browsing: {{ current_path }}</h1>
+    <ul>
+        {% if current_path != base_dir %}
+        <li><a href="/browse?path={{ current_path | dirname }}">.. (Parent Directory)</a></li>
+        {% endif %}
+        {% for item in items %}
+        <li>
+            {% if (current_path + '/' + item) | isdir %}
+            <a href="/browse?path={{ current_path + '/' + item }}">{{ item }}/</a>
+            {% else %}
+            <a href="/view-file?file={{ current_path + '/' + item }}">{{ item }}</a>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
