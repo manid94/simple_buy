@@ -17,7 +17,7 @@ TOKENGENERATION_TIME = {
 }
 
 STRATEGY_CLOSE_TIME = {
-    'hours': 23,
+    'hours': 15,
     'minutes': 22,
     'seconds': 0
 }
