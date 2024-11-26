@@ -81,6 +81,11 @@ class OpenWebSocket:
 
     def open_callback(self):
         #global socket_opened
+        if not self.socket_opened:
+            if len(self.subscribedTokens) > 0:
+                for subscribeToken in self.subscribedTokens:
+                    self.api.subscribe(subscribeToken)
+            
         self.socket_opened = True
         self.trace_execution('app is connected')
 
