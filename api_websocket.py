@@ -88,6 +88,7 @@ class OpenWebSocket:
         
     def socket_error_callback(self, error):
         self.trace_execution(f'+error on socket connection -   {error}')
+        self.socket_opened = False
         raise ValueError(f'+error on socket connection -   {error}')
         #os._exit(0)
         
