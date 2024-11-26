@@ -1,5 +1,5 @@
 import pandas as pd
-import os
+import threading
 import time
 
 GLOBAL_ORDER_STATUS = {}
@@ -92,10 +92,15 @@ class OpenWebSocket:
         #api.subscribe(['NSE|22', 'BSE|522032'])
         
     def socket_error_callback(self, error):
-        self.trace_execution(f'+error on socket connection -   {error}')
-        self.socket_opened = False
-        raise ValueError(f'+error on socket connection -   {error}')
-        #os._exit(0)
+        def handle_error():
+            self.trace_execution(f'+error on socket connection -   {error}')
+            self.socket_opened = False
+            time.sleep(10)
+            if not self.socket_opened:
+                raise ValueError(f'+error on socket connection -   {error}')
+
+        thread = threading.Thread(target=handle_error)
+        thread.start()
         
 
     #end of callbacks
