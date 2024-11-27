@@ -301,7 +301,7 @@ class NewStrategy:
             # Wait for order confirmation
             while not (sell_target_order_id in ORDER_STATUS and ORDER_STATUS[sell_target_order_id].get('tsym')):
                 self.trace_execution("Waiting for order confirmation...")
-                time.sleep(0.25)
+                time.sleep(0.10)
 
             # Log the sell order details
             logger_entry(
@@ -360,7 +360,7 @@ class NewStrategy:
             ORDER_STATUS = self.api_websocket.get_latest_data()
             while not (buy_back_order_id in ORDER_STATUS and ORDER_STATUS[buy_back_order_id].get('tsym')):
                 self.trace_execution("Waiting for buy_back_order_id and 'tsym' data...")
-                time.sleep(0.25)
+                time.sleep(0.05)
 
             # Log order placement details
             logger_entry(
@@ -384,7 +384,12 @@ class NewStrategy:
             # Monitor for order completion
             log_buy = ThrottlingLogger(buy_back_order_id, logger_entry)
             while not is_order_complete(buy_back_order_id, ORDER_STATUS, log_buy, self.strategy_log_class):
-                time.sleep(0.25)
+                ltp = self.api_websocket.fetch_last_trade_price(option_type, self.LEG_TOKEN)
+                if ltp>=sell_price:
+                    cancel_response = self.api.cancel_order(buy_back_order_id)
+                    if 'result' not in cancel_response:
+                        return self.monitor_leg(option_type, sell_price)
+                time.sleep(0.05)
             self.trace_execution(f"Buy-back order executed successfully for {option_type}: {buy_back_order_id}")
             # Retrieve and log the average price for the completed order
             buy_back_avg_price = ORDER_STATUS[buy_back_order_id]['avgprc']
