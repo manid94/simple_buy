@@ -103,7 +103,7 @@ def start_the_strategy(stop_event):
     try:
         trace_execution(f'Starting WebSocket data connection...{datetime.now(ist).strftime("%Y %m %d - %H /%M/ %S")}')
         api = getshoonyatradeapi()
-        api_websocket = OpenWebSocket(api, trace_execution)
+        api_websocket = OpenWebSocket(api, trace_execution, exit_all_positions)
         
         while not api_websocket.is_socket_opened():
             time.sleep(0.1)

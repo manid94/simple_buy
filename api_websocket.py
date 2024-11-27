@@ -10,12 +10,13 @@ ist = pytz.timezone('Asia/Kolkata')
 GLOBAL_ORDER_STATUS = {}
 
 class OpenWebSocket:
-    def __init__(self, api, trace_execution):
+    def __init__(self, api, trace_execution, exit_all):
         print('entered')
         self.SYMBOLDICT = {}
         self.ORDER_STATUS = []
         self.subscribedTokens = []
         self.api = api
+        self.exit_all - exit_all
         self.trace_execution = trace_execution
         self.socket_opened = False
         self.lastUpdatedSocketTime = datetime.now(ist)
@@ -37,11 +38,7 @@ class OpenWebSocket:
         #         'ret': 'DAY', 'exchordid': '1500000079566637', 'fillshares': '30', 'dscqty': '0', 'avgprc': '2.85', 'exch_tm': '16-10-2024 11:15:20'
         # }
         #print("order event: " + str(message))
-        current_time = datetime.now(ist)
-        differenceSeconds = current_time - self.lastUpdatedSocketTime
-        if differenceSeconds.total_seconds() > 2:
-            self.trace_execution(f'+differecnce in socket connection at {datetime.now(ist)}-  {differenceSeconds.total_seconds()}')
-        
+
         if 'norenordno' in message:
             GLOBAL_ORDER_STATUS[message['norenordno']] = {}
             GLOBAL_ORDER_STATUS[message['norenordno']]['status'] = message['status']
@@ -78,7 +75,8 @@ class OpenWebSocket:
         #ap  Average trade price
 
         # print("quote event: {0}".format(time.strftime('%d-%m-%Y %H:%M:%S')) + str(message))
-
+        self.check_idle_connection('LEG TOKEN')
+        
         key = message['tk']
         if key in self.SYMBOLDICT:
             symbol_info =  self.SYMBOLDICT[key]
@@ -91,10 +89,7 @@ class OpenWebSocket:
 
     def open_callback(self):
         #global socket_opened
-        current_time = datetime.now(ist)
-        differenceSeconds = current_time - self.lastUpdatedSocketTime
-        if differenceSeconds.total_seconds() > 2:
-            self.trace_execution(f'+differecnce in socket connection at open_socket {datetime.now(ist)}-  {differenceSeconds.total_seconds()}')
+        self.check_idle_connection('OPEN_CALLBACK')
         if not self.socket_opened:
             if len(self.subscribedTokens) > 0:
                 for subscribeToken in self.subscribedTokens:
@@ -109,8 +104,9 @@ class OpenWebSocket:
         self.socket_opened = False
         self.trace_execution(f'+error on socket connection -   {error}')
         def handle_error():
-            time.sleep(10)
+            time.sleep(20)
             if not self.socket_opened:
+                self.exit_all(self.api)
                 raise ValueError(f'+error on socket connection -   {error}')
 
         thread = threading.Thread(target=handle_error)
@@ -179,3 +175,10 @@ class OpenWebSocket:
         if self.socket_opened:
             return True
         return False
+    
+    def check_idle_connection(self, called_def):        
+        current_time = datetime.now(ist)
+        differenceSeconds = current_time - self.lastUpdatedSocketTime
+        if differenceSeconds.total_seconds() > 2:
+            self.trace_execution(f'+{called_def} differecnce in socket connection  {datetime.now(ist)} - {differenceSeconds.total_seconds()}')
+        self.lastUpdatedSocketTime = datetime.now(ist)
