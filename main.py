@@ -22,6 +22,10 @@ STRATEGY_CLOSE_TIME = {
     'seconds': 0
 }
 
+
+
+
+
 def main():
     # Define the start and end times
     start_time = ist_datatime.replace(hour=TOKENGENERATION_TIME['hours'], minute=TOKENGENERATION_TIME['minutes'], second=TOKENGENERATION_TIME['seconds'], microsecond=0).time()
@@ -68,3 +72,15 @@ def main():
 # Add this block for Windows compatibility
 if __name__ == '__main__':
     main()
+
+
+
+# morning 9:30 start integrating with broker
+# wait till 9:15 for entry time
+# start the server parallely to check logs in remote - note server should be called on start of the process
+# 
+
+
+
+# Need to do
+# broker level exit support
