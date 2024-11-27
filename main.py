@@ -10,12 +10,12 @@ ist_datatime = datetime.now(ist)
 
 TOKENGENERATION_TIME = {
     'hours': 8,
-    'minutes': 42,
+    'minutes': 22,
     'seconds': 0
 }
 
 STRATEGY_CLOSE_TIME = {
-    'hours': 23,
+    'hours': 15,
     'minutes': 22,
     'seconds': 0
 }
