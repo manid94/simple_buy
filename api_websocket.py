@@ -1,6 +1,11 @@
-import pandas as pd
+from datetime import datetime
 import threading
 import time
+import pytz
+
+
+
+ist = pytz.timezone('Asia/Kolkata')
 
 GLOBAL_ORDER_STATUS = {}
 
@@ -13,6 +18,7 @@ class OpenWebSocket:
         self.api = api
         self.trace_execution = trace_execution
         self.socket_opened = False
+        self.lastUpdatedSocketTime = datetime.now(ist)
         #self.event_handler_order_update = order_updates
         searchData = api.searchscrip(exchange='NFO', searchtext='SBI')
         if 'stat' in searchData:
@@ -31,6 +37,10 @@ class OpenWebSocket:
         #         'ret': 'DAY', 'exchordid': '1500000079566637', 'fillshares': '30', 'dscqty': '0', 'avgprc': '2.85', 'exch_tm': '16-10-2024 11:15:20'
         # }
         #print("order event: " + str(message))
+        current_time = datetime.now(ist)
+        differenceSeconds = current_time - self.lastUpdatedSocketTime
+        if differenceSeconds.total_seconds() > 2:
+            self.trace_execution(f'+differecnce in socket connection at {datetime.now(ist)}-  {differenceSeconds.total_seconds()}')
         
         if 'norenordno' in message:
             GLOBAL_ORDER_STATUS[message['norenordno']] = {}
@@ -81,6 +91,10 @@ class OpenWebSocket:
 
     def open_callback(self):
         #global socket_opened
+        current_time = datetime.now(ist)
+        differenceSeconds = current_time - self.lastUpdatedSocketTime
+        if differenceSeconds.total_seconds() > 2:
+            self.trace_execution(f'+differecnce in socket connection at open_socket {datetime.now(ist)}-  {differenceSeconds.total_seconds()}')
         if not self.socket_opened:
             if len(self.subscribedTokens) > 0:
                 for subscribeToken in self.subscribedTokens:
@@ -92,9 +106,9 @@ class OpenWebSocket:
         #api.subscribe(['NSE|22', 'BSE|522032'])
         
     def socket_error_callback(self, error):
+        self.socket_opened = False
+        self.trace_execution(f'+error on socket connection -   {error}')
         def handle_error():
-            self.trace_execution(f'+error on socket connection -   {error}')
-            self.socket_opened = False
             time.sleep(10)
             if not self.socket_opened:
                 raise ValueError(f'+error on socket connection -   {error}')
@@ -105,6 +119,7 @@ class OpenWebSocket:
 
     #end of callbacks
     def open_socket(self):
+
         if self.socket_opened != True:
             self.trace_execution(f'{self.socket_opened} - SOCKET STATUS')
             self.api.start_websocket(order_update_callback=self.event_handler_order_update, subscribe_callback=self.event_handler_quote_update, socket_open_callback=self.open_callback, socket_error_callback=self.socket_error_callback)
