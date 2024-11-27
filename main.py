@@ -47,7 +47,7 @@ def main():
             elif current_time > end_time:
                 print("Stopping strategy thread.")
                 stop_event.set()  # Signal the thread to stop
-                strategy_thread.join()  # Wait for the thread to finish
+                # strategy_thread.join()  # Wait for the thread to finish
                 print("Strategy has stopped for today.")
                 
                 # Reset for the next day
