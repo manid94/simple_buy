@@ -16,7 +16,7 @@ class OpenWebSocket:
         self.ORDER_STATUS = []
         self.subscribedTokens = []
         self.api = api
-        self.exit_all - exit_all
+        self.exit_all = exit_all
         self.trace_execution = trace_execution
         self.socket_opened = False
         self.lastUpdatedSocketTime = datetime.now(ist)
