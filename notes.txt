@@ -31,6 +31,7 @@ improvements
    git pull need to be done before running the code  - done
    check weather more selling is happening to wait randomly - not needed now
    add try except block in all classes.
+   need confirm exit order must implement
 
 
    
@@ -59,7 +60,19 @@ low priority
     enhance the code to accept quantity more than freeze quantity 
     in place order need to support orders more than freeze quantity
     orders status need to push more than one value for freeze multiple order
+    need to save multiple orders
     need to support angel broking api
+    need to implement broker level PNL
+
+    3 logs needed broker execution tracking, strategy execution tracking, order execution traking 
+
+
+    Summary:
+Graceful Stop: Use flags (threading.Event) if you control the thread logic.
+Daemon Threads: Use daemon threads for non-critical tasks that don’t need cleanup.
+Force Termination: Use ctypes to forcefully kill threads (not recommended).
+Thread Management: Use concurrent.futures for easier management and cancelation.
+Graceful shutdown is always the preferred approach. Let me know if you need further clarification or examples!
 
 
 25/11

@@ -7,13 +7,13 @@ from strategy_log_files.strategy_log import createLogger
 from utils.trailing_strategy import Tralling
 
 
-# flag to tell us if the api_websocket is open
+# set to indian tyme
 
 ist_datatime = datetime.now(ist)
 
 class NewStrategy:
     def __init__(self, datas):
-        # Logging
+        # Logging for strategy tracking
         self.logger = createLogger(datas['SYMBOL'])
         
         self.trace_execution('entered strategy')
@@ -44,6 +44,7 @@ class NewStrategy:
         self.BUY_BACK_LOTS = datas['BUY_BACK_LOTS']
         
         #Trailing stop Loss
+        # if trailing enabled create trailing object with the config
         self.ENABLE_TRAILING = datas['ENABLE_TRAILING']
         if datas['ENABLE_TRAILING']:
             self.trail = Tralling(datas['Trail_config'], self.exit_strategy)
@@ -53,7 +54,7 @@ class NewStrategy:
         self.CURRENT_STRATEGY_ORDERS = []
         self.ONE_LOT_QUANTITY = get_symbol_lot_qty(datas['SYMBOL'])
 
-        # Price data structure to track CE and PE prices
+        # constructing basic Price data structure to track CE and PE prices
         self.PRICE_DATA = {
             'CE_PRICE_DATA': {key: 0 for key in ['INITIAL_SELL_CE', 'INITIAL_BUY_CE', 
                                                  'BUY_BACK_BUY_CE', 'BUY_BACK_SELL_CE', 
@@ -64,12 +65,12 @@ class NewStrategy:
         }
         
 
-        # Strategy status flags
+        # Strategy status flags to control and exit strategy flow
         self.strategy_running = False
         self.exited_strategy_started = False
         self.exited_strategy_completed = False
 
-        # Sell prices for CE and PE
+        # Sell prices for CE and PE if sell was done
         self.sell_price_ce = 0
         self.sell_price_pe = 0
 
@@ -79,12 +80,18 @@ class NewStrategy:
 
 
     def trace_execution(self, str= 'no data'):
+        #logging funtion on each strategy level with time
         print(f'{str} at {datetime.now(ist).strftime("%Y %m %d - %H /%M/ %S")}')
         self.logger.info(f'{str}')
         
     def fetch_atm_strike(self):
         self.trace_execution('entered in fetch_atm_strike')
-
+        # fetching current price
+        # calculate ATM strike based on that
+        # if difference is given calculate concurrent strikes based on that
+        # register leg token to be used across the strategy.
+        # subscribing leg token for listening in monitor def
+        # return ATM
         try:
             # Fetch the current NIFTY price
             symbol_details = self.api.get_quotes(exchange='NSE', token=self.token)
@@ -138,6 +145,10 @@ class NewStrategy:
     # Calculate PNL based on current leg status        
     # Function to calculate total PNL
     def calculate_leg_pnl(self, option_type, trade_type, lots):
+        # this is to calculate inside strategy find the pnl of only one leg
+        # construct key id to access LEG related prices
+        # get sell value and buy value (if traded already assign traded value (or) assign current value )
+        # calculate difference and asiign value
         try:
             # Define price data key based on option type (CE or PE)
             price_data_key = f"{option_type}_PRICE_DATA"
@@ -174,6 +185,12 @@ class NewStrategy:
         
         
     def calculate_total_pnl(self, log=False):
+        # in this we are calculating strategy level PNL
+        # get profit and loss of each leg 
+        # calculate profit and loss combining all
+        # if trailing enabled pass PNL to trailling
+        # if calling function enabled log print log
+        # return PNL
         try:
             # Calculate PnL for each leg type and trade stage
             ce_entry_pnl = self.calculate_leg_pnl('CE', 'INITIAL', self.INITIAL_LOTS)
@@ -209,6 +226,8 @@ class NewStrategy:
         
     def check_for_stop_loss(self, option_type, selldetails, buydetails):
         self.trace_execution('entered in check_for_stop_loss')
+        # monitor for stoploss based on the config
+        #
         try:
             # Retrieve the latest order status
             ORDER_STATUS = self.api_websocket.get_latest_data()

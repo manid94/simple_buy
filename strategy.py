@@ -13,6 +13,8 @@ from utils.custom_threading import MyThread
 
 logging.basicConfig(filename=f'strategy_log_files/strategy__{datetime.now(ist).strftime("%Y_%m%d_%H %M %S")}.log', level=logging.INFO)
 
+
+# currently logging entirely logging for broker level needed 
 def trace_execution(str= 'no data', data=datetime.now(ist).strftime("%Y %m %d - %H /%M/ %S")):
     print(f'{str} at {data}')
     logging.info(f'{str} at {data}')
@@ -102,14 +104,17 @@ def start_the_strategy(stop_event):
     global api
     try:
         trace_execution(f'Starting WebSocket data connection...{datetime.now(ist).strftime("%Y %m %d - %H /%M/ %S")}')
+        # login into the broker
         api = getshoonyatradeapi()
-        api_websocket = OpenWebSocket(api, trace_execution)
+        # create a class to handle listening and subscription of legs globally across multiple strategy.
+        api_websocket = OpenWebSocket(api, trace_execution, exit_all_positions)
         
+        # wait till websocket connection oppened
         while not api_websocket.is_socket_opened():
             time.sleep(0.1)
 
 
-
+        # create the config to configure the strategy
         nifty_data = {
                         # API & WebSocket initialization
             'api': api,
@@ -179,7 +184,9 @@ def start_the_strategy(stop_event):
             }
         }
 
+        #create strategy object
         nifty_strategy = NewStrategy(nifty_data)
+        #run strategy in seperate thread
         nifty_thread = MyThread(target=nifty_strategy.run_strategy, args=(), daemon=True)
         nifty_thread.start()
 

@@ -8,6 +8,8 @@ from trailsAndSampleResponceFiles.temp.server.server import start_server
 
 ist_datatime = datetime.now(ist)
 
+
+
 TOKENGENERATION_TIME = {
     'hours': 8,
     'minutes': 22,
@@ -19,6 +21,10 @@ STRATEGY_CLOSE_TIME = {
     'minutes': 22,
     'seconds': 0
 }
+
+
+
+
 
 def main():
     # Define the start and end times
@@ -66,3 +72,15 @@ def main():
 # Add this block for Windows compatibility
 if __name__ == '__main__':
     main()
+
+
+
+# morning 9:30 start integrating with broker
+# wait till 9:15 for entry time
+# start the server parallely to check logs in remote - note server should be called on start of the process
+# 
+
+
+
+# Need to do
+# broker level exit support

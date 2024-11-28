@@ -3,8 +3,11 @@ google-cloud-storage
 pytotp
 websocket-client
 NorenRestApiPy
+NorenRestApi
 pyotp
 pytz
+PyYAML
+requests
 pandas
 deepdiff
 datetime
