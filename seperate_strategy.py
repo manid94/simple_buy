@@ -787,8 +787,8 @@ class NewStrategy:
                     # Calculate time to sleep until 5 seconds before start_time
                     time_to_sleep = (datetime.combine(datetime.today(), start_time) - datetime.combine(datetime.today(), current_time)).total_seconds()
                     self.trace_execution("Outside trading hours, strategy paused.")
-                    if time_to_sleep > 10:
-                        time.sleep(max(time_to_sleep-5, 0))  # Ensure no negative sleep
+                    if time_to_sleep > 5:
+                        time.sleep(max(time_to_sleep-2, 0))  # Ensure no negative sleep
 
             return True
         except Exception as e: 
