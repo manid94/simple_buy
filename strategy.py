@@ -25,13 +25,13 @@ def trace_execution(str= 'no data', data=datetime.now(ist).strftime("%Y %m %d - 
 SYMBOL = 'NiftyBank'
 BUY_BACK_STATIC = False
 INITIAL_LOTS = 1  # Start with 1 lot
-STRIKE_DIFFERENCE = 0
+STRIKE_DIFFERENCE = 300
 ONE_LOT_QUANTITY = 15  # Number of units per lot in Bank Nifty
 TARGET_PROFIT = 500
 MAX_LOSS = 300
 MAX_LOSS_PER_LEG = 200
-SAFETY_STOP_LOSS_PERCENTAGE = 0.83 # 0.985 #0.83
-BUY_BACK_PERCENTAGE = 0.82 #0.98 #0.82
+SAFETY_STOP_LOSS_PERCENTAGE = 0.98 # 0.985 #0.83
+BUY_BACK_PERCENTAGE = 0.98 #0.98 #0.82
 SELL_TARGET_PERCENTAGE = 0.02 #0.01 # 0.025
 BUY_BACK_LOSS_PERCENTAGE = 0.90
 AVAILABLE_MARGIN = 5000
@@ -106,6 +106,7 @@ def start_the_strategy(stop_event):
         trace_execution(f'Starting WebSocket data connection...{datetime.now(ist).strftime("%Y %m %d - %H /%M/ %S")}')
         # login into the broker
         api = getshoonyatradeapi()
+        trace_execution(f'123')
         # create a class to handle listening and subscription of legs globally across multiple strategy.
         api_websocket = OpenWebSocket(api, trace_execution, exit_all_positions)
         
@@ -113,7 +114,7 @@ def start_the_strategy(stop_event):
         while not api_websocket.is_socket_opened():
             time.sleep(0.1)
 
-
+        trace_execution(f'123')
         # create the config to configure the strategy
         nifty_data = {
                         # API & WebSocket initialization
@@ -186,6 +187,7 @@ def start_the_strategy(stop_event):
 
         #create strategy object
         nifty_strategy = NewStrategy(nifty_data)
+        trace_execution(f'123')
         #run strategy in seperate thread
         nifty_thread = MyThread(target=nifty_strategy.run_strategy, args=(), daemon=True)
         nifty_thread.start()
@@ -199,21 +201,21 @@ def start_the_strategy(stop_event):
         # bank_nifty_thread.join()
         api.close_websocket()
         return True
-    except TypeError as e:
-        trace_execution(f"Type error occurred: {e}")
-        exit_all_positions(api)
-        raise ValueError('Error on exit start_the_strategy')
-    except ZeroDivisionError as e:
-        trace_execution(f"Math error occurred: {e}")
-        exit_all_positions(api)
-        raise ValueError('Error on exit start_the_strategy')
-    except ValueError as e:
-        trace_execution(f"Value error occurred: {e}")
-        exit_all_positions(api)
-        raise ValueError('Error on exit start_the_strategy')
+    # except TypeError as e:
+    #     trace_execution(f"Type error occurred: {e}")
+    #     exit_all_positions(api)
+    #     raise ValueError('Error on exit start_the_strategy')
+    # except ZeroDivisionError as e:
+    #     trace_execution(f"Math error occurred: {e}")
+    #     exit_all_positions(api)
+    #     raise ValueError('Error on exit start_the_strategy')
+    # except ValueError as e:
+    #     trace_execution(f"Value error occurred: {e}")
+    #     exit_all_positions(api)
+    #     raise ValueError('Error on exit start_the_strategy')
     except Exception as e:
         trace_execution(f"An unexpected error occurred: {e}")
-        exit_all_positions(api)
+        #exit_all_positions(api)
         raise ValueError('Error on exit start_the_strategy')
     
 
