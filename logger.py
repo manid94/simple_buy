@@ -80,18 +80,6 @@ class LocalJsonLogger:
             "order_method": str(order_method),
             "status": str(status)   
         }
-        return {
-            "time": datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S"),
-            "tsymbol": f"BANKNIFTY23OCT24C{random.randint(50000, 60000)}",
-            "orderno": f"{random.randint(10000000000000, 99999999999999)}",
-            "type": random.choice(["B", "S"]),
-            "quantity": str(random.randint(10, 100)),
-            "ordered_price": round(random.uniform(100.0, 300.0), 2),
-            "executed_price": round(random.uniform(100.0, 300.0), 2),
-            "executed_quantity": str(random.randint(10, 100)),
-            "order_type": random.choice(["MKT", "LMT", "update"]),
-            "status": random.choice(["placed", "open", "pending", "completed"])
-        }
 
 # if __name__ == "__main__":
 #     # Configuration
@@ -158,7 +146,7 @@ def generate_and_update_file(data, logger_class):
     logger_class.append_log(new_entry)
     return True
 
-def logger_entry(logger,tsymbol, orderno, direction, order_type='u', qty=0, ordered_price=0, order_method='UnKn', fillqty='none', avg_price='0', status='placed'):
+def logger_entry(logger, tsymbol, orderno, direction, order_type='u', qty=0, ordered_price=0, order_method='UnKn', fillqty='none', avg_price='0', status='placed'):
     # Using a dictionary for clear and structured data logging
     print(f'logger_entry {order_type}')
     datas = {

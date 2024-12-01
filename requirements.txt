@@ -3,6 +3,7 @@ google-cloud-storage
 pytotp
 websocket-client
 NorenRestApiPy
+selenium
 pyotp
 pytz
 PyYAML

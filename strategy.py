@@ -30,8 +30,8 @@ ONE_LOT_QUANTITY = 15  # Number of units per lot in Bank Nifty
 TARGET_PROFIT = 500
 MAX_LOSS = 300
 MAX_LOSS_PER_LEG = 200
-SAFETY_STOP_LOSS_PERCENTAGE = 0.98 # 0.985 #0.83
-BUY_BACK_PERCENTAGE = 0.98 #0.98 #0.82
+SAFETY_STOP_LOSS_PERCENTAGE = 0.83 # 0.985 #0.83
+BUY_BACK_PERCENTAGE = 0.82 #0.98 #0.82
 SELL_TARGET_PERCENTAGE = 0.02 #0.01 # 0.025
 BUY_BACK_LOSS_PERCENTAGE = 0.90
 AVAILABLE_MARGIN = 5000
@@ -201,21 +201,21 @@ def start_the_strategy(stop_event):
         # bank_nifty_thread.join()
         api.close_websocket()
         return True
-    # except TypeError as e:
-    #     trace_execution(f"Type error occurred: {e}")
-    #     exit_all_positions(api)
-    #     raise ValueError('Error on exit start_the_strategy')
-    # except ZeroDivisionError as e:
-    #     trace_execution(f"Math error occurred: {e}")
-    #     exit_all_positions(api)
-    #     raise ValueError('Error on exit start_the_strategy')
-    # except ValueError as e:
-    #     trace_execution(f"Value error occurred: {e}")
-    #     exit_all_positions(api)
-    #     raise ValueError('Error on exit start_the_strategy')
+    except TypeError as e:
+        trace_execution(f"Type error occurred: {e}")
+        exit_all_positions(api)
+        raise ValueError('Error on exit start_the_strategy')
+    except ZeroDivisionError as e:
+        trace_execution(f"Math error occurred: {e}")
+        exit_all_positions(api)
+        raise ValueError('Error on exit start_the_strategy')
+    except ValueError as e:
+        trace_execution(f"Value error occurred: {e}")
+        exit_all_positions(api)
+        raise ValueError('Error on exit start_the_strategy')
     except Exception as e:
         trace_execution(f"An unexpected error occurred: {e}")
-        #exit_all_positions(api)
+        exit_all_positions(api)
         raise ValueError('Error on exit start_the_strategy')
     
 
