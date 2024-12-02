@@ -35,14 +35,14 @@ def main():
     stop_event = threading.Event()
     strategy_thread = threading.Thread(target=start_the_strategy, args=(stop_event,))
 
-    # Start Flask server in a separate process
-    server_process = multiprocessing.Process(target=start_server)
-    server_process.start()
 
     try:
         while True:
             current_time = datetime.now(ist).time()
             if start_time <= current_time <= end_time and not entry_happened_today:
+                # Start Flask server in a separate process
+                server_process = multiprocessing.Process(target=start_server)
+                server_process.start()
                 print("Starting strategy thread.")
                 try:
                     strategy_thread.start()
